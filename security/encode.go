@@ -10,6 +10,7 @@ import (
 )
 
 //PASSWORD -
+// TODO - this password is for development. please change it first before build for production.
 var PASSWORD []byte = []byte("YcsEW=jN83%!=Ym&@86sX3hBBuUT486X")
 
 //EncryptString -
@@ -23,8 +24,7 @@ func EncryptString(stringToEncrypt string) (encryptedString string) {
 		panic(err.Error())
 	}
 
-	//Create a new GCM - https://en.wikipedia.org/wiki/Galois/Counter_Mode
-	//https://golang.org/pkg/crypto/cipher/#NewGCM
+	//Create a new GCM
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
 		panic(err.Error())
@@ -37,7 +37,6 @@ func EncryptString(stringToEncrypt string) (encryptedString string) {
 	}
 
 	//Encrypt the data using aesGCM.Seal
-	//Since we don't want to save the nonce somewhere else in this case, we add it as a prefix to the encrypted data. The first nonce argument in Seal is the prefix.
 	ciphertext := aesGCM.Seal(nonce, nonce, plaintext, nil)
 	return fmt.Sprintf("%x", ciphertext)
 }
