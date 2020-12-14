@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-//PASSWORD -
+//PASSWORD - 32 bytes
 // TODO - this password is for development. please change it first before build for production.
 var PASSWORD []byte = []byte("YcsEW=jN83%!=Ym&@86sX3hBBuUT486X")
 
