@@ -1,0 +1,53 @@
+{
+    "host": "localhost",
+    "port": 4000,
+    "log": {
+        "level": "trace",
+        "output": "both",
+        "format": "booking.log",
+        "dir": ""
+    },
+    "baseurl": "/api/v1",
+    "cache": {
+        "server": "redis",
+        "address": "localhost:6379",
+        "password": "",
+        "enable": true
+    },
+    "timeout": 5,
+    "rsa": {
+        "private": "private.pem",
+        "public": "public.pem"
+    },
+    "expires": 12,
+    "db": {
+        "type": "mariadb",
+        "dns": "${user}:${password}@tcp(${host}:${port})/${database}?charset=utf8mb4&parseTime=True&loc=Local",
+        "host": "localhost",
+        "port": 3306,
+        "user": "booking",
+        "password": "",
+        "database": "bookingdb",
+        "max_idle_conns": 30,
+        "max_open_conns": 20,
+        "conn_max_lifetime": 10,
+        "debug": true
+    },
+    "account": [
+        {
+            "email": "admin",
+            "password": "123456",
+            "role": "admin"
+        },
+        {
+            "email": "booking",
+            "password": "123456",
+            "role": "member"
+        }
+    ],
+    "holidays": {
+        "url": "https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv",
+        "encode": "sjis",
+        "header": true
+    }
+}
