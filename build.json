@@ -1,0 +1,16 @@
+{
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 0,
+    "Build": 0,
+    "Date": "2020/12/02",
+    "Time": "12:00:00",
+    "CompanyName": "株式会社ディットテクノロジー",
+    "FileDescription": "Booking System",
+    "InternalName": "booking",
+    "LegalCopyright": "Copyright (C) 2020 Ditto Technology Co., Ltd.",
+    "OriginalFilename": "booking.exe",
+    "ProductName": "booking",
+    "IconPath": "",
+    "ManifestPath": ""
+}
