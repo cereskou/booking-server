@@ -1,0 +1,63 @@
+package api
+
+import (
+	"ditto/booking/config"
+	"ditto/booking/security"
+	"ditto/booking/utils"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
+)
+
+//Token -
+type Token struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	Expires      int64  `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (s *Service) generateToken(name string, email string, role string) (*Token, error) {
+	conf := config.Load()
+
+	tm := time.Duration(conf.Expires)
+	rftm := time.Duration(tm + 6)
+	//create token
+	token := jwt.New(jwt.SigningMethodRS512)
+
+	payload := name + "|" + email + "|" + role
+	secret := security.EncryptString(payload)
+
+	//set claims
+	claims := token.Claims.(jwt.MapClaims)
+	claims["name"] = secret
+	claims["exp"] = utils.NowJST().Add(time.Hour * tm).Unix()
+
+	//generate encoded token
+	t, err := token.SignedString(s._rsa.GetPrivateKey())
+	if err != nil {
+		return nil, err
+	}
+
+	secret = security.EncryptString(payload)
+	expires := int64(time.Hour * rftm / time.Millisecond)
+	//refresh token
+	refreshtoken := jwt.New(jwt.SigningMethodRS512)
+	rclaims := refreshtoken.Claims.(jwt.MapClaims)
+	rclaims["sub"] = secret
+	rclaims["exp"] = utils.NowJST().Add(time.Hour * rftm).Unix()
+
+	//generate encoded token
+	rt, err := refreshtoken.SignedString(s._rsa.GetPrivateKey())
+	if err != nil {
+		return nil, err
+	}
+
+	return &Token{
+		AccessToken:  t,
+		RefreshToken: rt,
+		TokenType:    "bearer",
+		Expires:      expires,
+	}, nil
+
+}
