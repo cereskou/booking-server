@@ -2,6 +2,7 @@ package api
 
 import (
 	"ditto/booking/security"
+	"ditto/booking/utils"
 	"net/http"
 	"strings"
 
@@ -17,18 +18,18 @@ func Unauthorized() *Response {
 	}
 }
 
-//emailFromToken -
-func emailFromToken(c echo.Context) string {
+//logonFromToken - get logon user from token
+func logonFromToken(c echo.Context) *Payload {
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
 
-	secret := claims["name"].(string)
+	secret := claims["uuid"].(string)
 	payload := security.DecryptString(secret)
 
-	bodys := strings.Split(payload, "|")
-	if len(bodys) == 3 {
-		return bodys[1]
+	var d Payload
+	err := utils.JSON.NewDecoder(strings.NewReader(payload)).Decode(&d)
+	if err != nil {
+		return nil
 	}
-
-	return ""
+	return &d
 }
