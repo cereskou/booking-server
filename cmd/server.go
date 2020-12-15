@@ -75,7 +75,6 @@ func RunServer(db *db.Database) error {
 	e.Server.Addr = fmt.Sprintf("%v:%v", conf.Host, conf.Port)
 	timeout := time.Duration(conf.Timeout) * time.Second
 	logger.Info(e.Server.Addr)
-	logger.Info("Timeout ", timeout)
 
 	//Serve
 	graceful.ListenAndServe(e.Server, timeout)
