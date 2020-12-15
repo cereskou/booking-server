@@ -17,7 +17,7 @@ type Token struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func (s *Service) generateToken(name string, email string, role string) (*Token, error) {
+func (s *Service) generateToken(d *Payload) (*Token, error) {
 	conf := config.Load()
 
 	tm := time.Duration(conf.Expires)
@@ -25,12 +25,15 @@ func (s *Service) generateToken(name string, email string, role string) (*Token,
 	//create token
 	token := jwt.New(jwt.SigningMethodRS512)
 
-	payload := name + "|" + email + "|" + role
-	secret := security.EncryptString(payload)
+	b, err := utils.JSON.Marshal(d)
+	if err != nil {
+		return nil, err
+	}
+	secret := security.EncryptSlice(b)
 
 	//set claims
 	claims := token.Claims.(jwt.MapClaims)
-	claims["name"] = secret
+	claims["uuid"] = secret
 	claims["exp"] = utils.NowJST().Add(time.Hour * tm).Unix()
 
 	//generate encoded token
@@ -39,7 +42,7 @@ func (s *Service) generateToken(name string, email string, role string) (*Token,
 		return nil, err
 	}
 
-	secret = security.EncryptString(payload)
+	secret = security.EncryptSlice(b)
 	expires := int64(time.Hour * rftm / time.Millisecond)
 	//refresh token
 	refreshtoken := jwt.New(jwt.SigningMethodRS512)
@@ -56,7 +59,7 @@ func (s *Service) generateToken(name string, email string, role string) (*Token,
 	return &Token{
 		AccessToken:  t,
 		RefreshToken: rt,
-		TokenType:    "bearer",
+		TokenType:    "Bearer",
 		Expires:      expires,
 	}, nil
 
