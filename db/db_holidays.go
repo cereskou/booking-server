@@ -17,7 +17,7 @@ func (d *Database) HolidaysInsert(recs []*models.Holiday) error {
 
 		values = append(values, val)
 	}
-	sql := "insert into holidays(ymd,name,class,update_user) values " + strings.Join(values, ",") + " on duplicate key update name = values(name)"
+	sql := "insert into holidays(ymd,name,class,update_user) values " + strings.Join(values, ",") + " on duplicate key update name=values(name),,update_user=values(update_user)"
 	err := d.DB().Exec(sql).Error
 	if err != nil {
 		return err
