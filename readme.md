@@ -2,6 +2,26 @@
 
 ## 開発日記
 
+### 2020/12/15
+
+**実装済み**
+
+Admin  
+
+- GET /admin/account/{email} アカウント情報取得します
+- GET /admin/user/{email} ユーザー情報を取得します(admin)
+- PUT /admin/user/{email} ユーザー情報を更新します
+  
+User  
+  
+- GET /user ログイン中ユーザー（自分）情報を取得します
+- PUT /user ユーザー（自分）情報を更新します
+- GET /user/account ログイン中ユーザー（自分）ログイン情報を取得します
+- POST /user/login ログイン
+- PUT /user/password ユーザー（自分）パスワードを更新します
+- POST /user/refresh リフレッシュトークンを使って新しいアクセストークンを取得します
+  
+---
 ### 2020/12/13 
 
 first draft.  
@@ -12,7 +32,7 @@ first draft.
 - use casbin support rbac
 - token check on server side
 
-**実装済み：**  
+**実装済み**  
 1. User authorization  
 login by email and password and return access_token and refresh_token.
 
