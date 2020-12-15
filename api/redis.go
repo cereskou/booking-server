@@ -63,3 +63,13 @@ func (s *Service) CacheSet(key string, val interface{}) error {
 
 	return errors.New("Not connect REDIS")
 }
+
+//CacheDel -
+func (s *Service) CacheDel(key string) error {
+	client := s.Redis()
+	if client != nil {
+		return client.Del(key).Err()
+	}
+
+	return errors.New("Not connect REDIS")
+}
