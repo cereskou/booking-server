@@ -73,23 +73,24 @@ type HolidaysConfig struct {
 
 //Config -
 type Config struct {
-	Error    error            `json:"-"`        //Error
-	Version  string           `json:"-"`        //Version
-	ExeName  string           `json:"-"`        //モジュールパス
-	FileName string           `json:"-"`        //s3service.jsonパス
-	Dir      string           `json:"-"`        //work directory
-	LogFile  string           `json:"-"`        //logfile fullpath
-	Host     string           `json:"host"`     //サーバーIP
-	Port     int              `json:"port"`     //ポート
-	BaseURL  string           `json:"baseurl"`  //BaseURL
-	Timeout  int              `json:"timeout"`  //タイムアウト（秒）
-	Log      Log              `json:"log"`      //ログ
-	Expires  int64            `json:"expires"`  //token expires in hour (access token)
-	Rsa      RsaConfig        `json:"rsa"`      //Rsa key
-	Db       DbConfig         `json:"db"`       //DB設定
-	Account  []*AccountConfig `json:"account"`  //account
-	Cache    CacheConfig      `json:"cache"`    //Cache server (redis)
-	Holidays HolidaysConfig   `json:"holidays"` //Holidays
+	Error          error            `json:"-"`               //Error
+	Version        string           `json:"-"`               //Version
+	ExeName        string           `json:"-"`               //モジュールパス
+	FileName       string           `json:"-"`               //s3service.jsonパス
+	Dir            string           `json:"-"`               //work directory
+	LogFile        string           `json:"-"`               //logfile fullpath
+	Host           string           `json:"host"`            //サーバーIP
+	Port           int              `json:"port"`            //ポート
+	BaseURL        string           `json:"baseurl"`         //BaseURL
+	Timeout        int              `json:"timeout"`         //タイムアウト（秒）
+	Log            Log              `json:"log"`             //ログ
+	Expires        int64            `json:"expires"`         //token expires in hour (access token)（時間）
+	ExpiresConfirm int64            `json:"expires_confirm"` //アカウント作成時確認コードの有効期限（時間）
+	Rsa            RsaConfig        `json:"rsa"`             //Rsa key
+	Db             DbConfig         `json:"db"`              //DB設定
+	Account        []*AccountConfig `json:"account"`         //account
+	Cache          CacheConfig      `json:"cache"`           //Cache server (redis)
+	Holidays       HolidaysConfig   `json:"holidays"`        //Holidays
 }
 
 //Load -
@@ -167,6 +168,17 @@ func (c *Config) Init() {
 
 	c.Db.DNS = dns
 
+	//Default
+	//Access tokenの有効期間：24時間
+	if c.Expires == 0 {
+		c.Expires = 24
+	}
+	//アカウント作成時確認コードの有効期限：48時間
+	if c.ExpiresConfirm == 0 {
+		c.ExpiresConfirm = 48
+	} else if c.ExpiresConfirm < 0 {
+		c.ExpiresConfirm = 0
+	}
 }
 
 //getLogFilename -
