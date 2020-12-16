@@ -13,8 +13,24 @@ import (
 //Unauthorized -
 func Unauthorized() *Response {
 	return &Response{
-		Code: http.StatusNotFound,
+		Code: http.StatusUnauthorized,
 		Data: "Invalid Username or Password",
+	}
+}
+
+//BadRequest -
+func BadRequest(err string) *Response {
+	return &Response{
+		Code: http.StatusBadRequest,
+		Data: err,
+	}
+}
+
+//NewResponse -
+func NewResponse(code int, msg string) *Response {
+	return &Response{
+		Code: code,
+		Data: msg,
 	}
 }
 
