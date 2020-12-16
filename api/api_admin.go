@@ -1,6 +1,7 @@
 package api
 
 import (
+	"ditto/booking/logger"
 	"net/http"
 	"net/url"
 
@@ -99,6 +100,64 @@ func (s *Service) AdminUpdateUser(c echo.Context) error {
 
 	//update
 	err := s.DB().UpdateUser(logon.ID, email, input)
+	if err != nil {
+		return err
+	}
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// AdminCreateAccount - アカウント情報作成
+// @Summary アカウント情報を新規作成します(admin)
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param data body Empty true "data"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /admin/user [post]
+func (s *Service) AdminCreateAccount(c echo.Context) error {
+	logon := logonFromToken(c)
+
+	input := make(map[string]interface{})
+	//decode
+	if err := c.Bind(&input); err != nil {
+		return err
+	}
+	// input check
+	//* email
+	//* password
+	// role
+	//* name
+	// age
+	// phone
+	// contact
+	// gender
+	// occupation
+
+	//update
+	account, err := s.DB().CreateAccount(logon.ID, input)
+	if err != nil {
+		return err
+	}
+
+	//Create a confirm code
+	confirm, err := s.DB().CreateConfirmCode(account)
+	if err != nil {
+		return err
+	}
+	//send mail
+	logger.Trace(confirm.ConfirmCode)
+
+	email := account.Email
+	//update
+	err = s.DB().UpdateUser(logon.ID, email, input)
 	if err != nil {
 		return err
 	}
