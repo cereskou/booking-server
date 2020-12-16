@@ -1,6 +1,7 @@
 package api
 
 import (
+	"ditto/booking/config"
 	"ditto/booking/logger"
 	"ditto/booking/models"
 	"ditto/booking/security"
@@ -42,7 +43,10 @@ func (s *Service) Login(c echo.Context) error {
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, Unauthorized())
 		}
-
+		//confirmed
+		if u.EmailConfirmed == 0 {
+			return c.JSON(http.StatusBadRequest, BadRequest("account not confirmed"))
+		}
 		//compare password
 		if !utils.CompareHashedPassword(u.PasswordHash, login.Password) {
 			return c.JSON(http.StatusUnauthorized, Unauthorized())
@@ -139,4 +143,36 @@ func (s *Service) RefreshToken(c echo.Context) error {
 	}
 
 	return err
+}
+
+// ConfirmEmail - Email確認
+// @Summary Email確認
+// @Tags User
+// @Accept json
+// @Produce json
+// @Param e query string true "Email"
+// @Param code query string true "are確認コード"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Router /user/confirm [get]
+func (s *Service) ConfirmEmail(c echo.Context) error {
+	email := c.QueryParam("e")
+	code := c.QueryParam("code")
+
+	conf := config.Load()
+
+	//有効期間
+	expires := utils.HourToSecond(conf.ExpiresConfirm)
+	//get confirm record
+	err := s.DB().ConfirmAccountWithCode(email, code, expires)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, NewResponse(http.StatusNotFound, err.Error()))
+	}
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }

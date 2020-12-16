@@ -21,6 +21,8 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	g.POST("/user/login", s.Login)
 	//refresh token
 	g.POST("/user/refresh", s.RefreshToken)
+	//user confirm
+	g.GET("/user/confirm", s.ConfirmEmail)
 
 	//User
 	u := g.Group("/user")
@@ -49,4 +51,5 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	a.GET("/user/:email", s.AdminGetUser)
 	a.GET("/account/:email", s.AdminGetAccount)
 	a.PUT("/user/:email", s.AdminUpdateUser)
+	a.POST("/user", s.AdminCreateAccount)
 }
