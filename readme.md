@@ -2,6 +2,40 @@
 
 ## 開発日記
 
+### 2020/12/16
+
+**実装済み**
+
+User  
+- GET /user/confirm Email確認
+
+/user/confirm/e=email&code=a69nrd62itj4
+```
+　update 
+    accounts a,accounts_confirm ac 
+  set 
+    a.email_confirmed=1,ac.used=1 
+  where a.id=ac.account_id
+        and ac.used=0
+        and ac.confirm_code=? 
+        and ac.email=?"
+        and TIME_TO_SEC(timediff(now(),ac.update_date))<=?
+  
+  メールアドレスと確認コードが一致する
+  かつ、指定期間内のみ更新できます。
+  更新完了後、該当確認コードを使用済みにする。
+```
+
+**確認コードの生成**  
+
+唯一のコードを生成します。  
+twwitter's snowflake -> generate id -> Base36()  
+
+```
+github.com/bwmarrin/snowflake
+```
+
+---
 ### 2020/12/15
 
 **実装済み**
