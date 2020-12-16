@@ -11,10 +11,13 @@ User
 
 /user/confirm/e=email&code=a69nrd62itj4
 ```
+SQL:
 　update 
-    accounts a,accounts_confirm ac 
+    accounts a,
+    accounts_confirm ac 
   set 
-    a.email_confirmed=1,ac.used=1 
+    a.email_confirmed=1,
+    ac.used=1 
   where a.id=ac.account_id
         and ac.used=0
         and ac.confirm_code=? 
@@ -28,8 +31,8 @@ User
 
 **確認コードの生成**  
 
-唯一のコードを生成します。  
-twwitter's snowflake -> generate id -> Base36()  
+Twitterのsnowflake方式で唯一のコードを生成します。  
+twitter's snowflake -> generate id -> Base36()  
 
 ```
 github.com/bwmarrin/snowflake
