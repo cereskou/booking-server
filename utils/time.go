@@ -14,3 +14,8 @@ func init() {
 func NowJST() time.Time {
 	return time.Now().UTC().In(jst)
 }
+
+//HourToSecond - 時間 to 秒
+func HourToSecond(h int64) int64 {
+	return h * 60 * 60
+}
