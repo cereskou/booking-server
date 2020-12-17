@@ -52,4 +52,13 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	a.GET("/account/:email", s.AdminGetAccount)
 	a.PUT("/user/:email", s.AdminUpdateUser)
 	a.POST("/user", s.AdminCreateAccount)
+	a.DELETE("/user/:email", s.AdminDeleteAcount)
+
+	//Dict
+	d := g.Group("/dict")
+	d.Use(middleware.JWTWithConfig(config))
+	d.Use(casbinmw.Middleware(s._enforcer))
+	d.GET("", s.GetDict)
+	d.POST("", s.AddDict)
+	d.POST("/array", s.AddDicts)
 }

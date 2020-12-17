@@ -62,3 +62,17 @@ type Password struct {
 	OldPassword string    `json:"old_password"` //Old Password
 	UpdateDate  time.Time `json:"update_date"`  //更新日時
 }
+
+//Dict -
+type Dict struct {
+	DictID int64  `jsont:"dictid"`
+	Code   int64  `jsont:"code"`
+	Value  string `jsont:"value"`
+	Remark string `jsont:"remark"`
+	Status bool   `jsont:"status"`
+}
+
+//Dicts -
+type Dicts struct {
+	Dict []*Dict `jsont:"dicts"`
+}
