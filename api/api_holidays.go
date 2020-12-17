@@ -20,8 +20,8 @@ import (
 	"golang.org/x/text/transform"
 )
 
-// UpdateHolidays - 国民の祝日・休日を更新します
-// @Summary 国民の祝日・休日を更新します
+// UpdateHolidays - 国民の祝日・休日
+// @Summary 内閣府サイトから国民の祝日・休日を取得します
 // @Tags Holidays
 // @Accept json
 // @Produce json
@@ -130,8 +130,8 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
-// ListHolidays - ユーザー情報
-// @Summary ユーザー情報を取得します(admin)
+// ListHolidays - 国民の祝日・休日取得
+// @Summary 国民の祝日・休日を取得します(年単位)
 // @Tags Holidays
 // @Accept json
 // @Produce json

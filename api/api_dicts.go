@@ -91,17 +91,13 @@ func (s *Service) AddDict(c echo.Context) error {
 
 	tx := s.DB().Begin()
 
-	status := 1
-	if !data.Status {
-		status = 0
-	}
 	//update password
 	rec := models.Dict{
 		DictID:     int(data.DictID),
 		Code:       int(data.Code),
 		Kvalue:     data.Value,
 		Remark:     data.Remark,
-		Status:     status,
+		Status:     data.Status,
 		UpdateUser: logon.ID,
 	}
 	err := s.DB().AddDict(tx, &rec)
@@ -140,16 +136,12 @@ func (s *Service) AddDicts(c echo.Context) error {
 
 	values := make([]*models.Dict, 0)
 	for _, v := range data.Dict {
-		status := 0
-		if v.Status {
-			status = 1
-		}
 		values = append(values, &models.Dict{
 			DictID:     int(v.DictID),
 			Code:       int(v.Code),
 			Kvalue:     v.Value,
 			Remark:     v.Remark,
-			Status:     status,
+			Status:     v.Status,
 			UpdateUser: logon.ID,
 		})
 	}
@@ -168,4 +160,123 @@ func (s *Service) AddDicts(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, resp)
+}
+
+// EnableDict - 辞書情報の有効無効
+// @Summary 辞書情報を有効・無効します
+// @Tags Dict
+// @Accept json
+// @Produce json
+// @Param dictid path int true "辞書番号"
+// @Param code query int false "コード"
+// @Param status query int true "1:有効・0:無効"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /dict/{dictid}/enabled [put]
+func (s *Service) EnableDict(c echo.Context) error {
+	logon := logonFromToken(c)
+
+	dictid, err := strconv.ParseInt(c.Param("dictid"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	}
+	code, err := strconv.ParseInt(c.QueryParam("code"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	}
+	status, err := strconv.ParseInt(c.QueryParam("status"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	}
+
+	tx := s.DB().Begin()
+
+	if code >= 0 {
+		err = s.DB().EnableDict(tx, logon.ID, dictid, code, int(status))
+		if err != nil {
+			tx.Rollback()
+			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		}
+	} else {
+		err = s.DB().EnableDicts(tx, logon.ID, dictid, int(status))
+		if err != nil {
+			tx.Rollback()
+			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		}
+	}
+
+	tx.Commit()
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// UpdateDict - 辞書情報更新
+// @Summary 辞書情報を更新します
+// @Tags Dict
+// @Accept json
+// @Produce json
+// @Param data query Dict true "データ"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /dict/{dictid} [put]
+func (s *Service) UpdateDict(c echo.Context) error {
+	logon := logonFromToken(c)
+
+	dictid, err := strconv.ParseInt(c.Param("dictid"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	}
+
+	data := Dict{}
+	//decode
+	if err := c.Bind(&data); err != nil {
+		return err
+	}
+
+	tx := s.DB().Begin()
+
+	//update password
+	rec := models.Dict{
+		DictID:     int(dictid),
+		Code:       int(data.Code),
+		Kvalue:     data.Value,
+		Remark:     data.Remark,
+		Status:     data.Status,
+		UpdateUser: logon.ID,
+	}
+	err = s.DB().UpdateDict(tx, logon.ID, &rec)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// UpdateDicts - 辞書情報更新（複数）
+// @Summary 辞書情報を更新します（複数）
+// @Tags Dict
+// @Accept json
+// @Produce json
+// @Param data query Dicts true "データ"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /dict/array [put]
+func (s *Service) UpdateDicts(c echo.Context) error {
+	return s.AddDicts(c)
 }

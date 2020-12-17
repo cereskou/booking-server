@@ -19,10 +19,26 @@ func Unauthorized() *Response {
 }
 
 //BadRequest -
-func BadRequest(err string) *Response {
+func BadRequest(err error) *Response {
 	return &Response{
-		Code: http.StatusBadRequest,
-		Data: err,
+		Code:  http.StatusBadRequest,
+		Error: err.Error(),
+	}
+}
+
+//NotFound -
+func NotFound(err error) *Response {
+	return &Response{
+		Code:  http.StatusNotFound,
+		Error: err.Error(),
+	}
+}
+
+//InternalServerError -
+func InternalServerError(err error) *Response {
+	return &Response{
+		Code:  http.StatusInternalServerError,
+		Error: err.Error(),
 	}
 }
 

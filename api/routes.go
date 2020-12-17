@@ -61,4 +61,5 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	d.GET("", s.GetDict)
 	d.POST("", s.AddDict)
 	d.POST("/array", s.AddDicts)
+	d.PUT("/:dictid/enabled", s.EnableDict)
 }

@@ -71,12 +71,12 @@ func (d *Database) GetAllDicts(db *gorm.DB) ([]*models.Dict, error) {
 }
 
 //UpdateDict -
-func (d *Database) UpdateDict(db *gorm.DB, updid int64, dictid int64, code int64, value string) error {
+func (d *Database) UpdateDict(db *gorm.DB, updid int64, data *models.Dict) error {
 	db = d.ValidDB(db)
 
 	sql := "update dicts set update_user=?,kvalue=? where dict=? and code=?"
 
-	err := db.Exec(sql, updid, value, dictid, code).Error
+	err := db.Exec(sql, updid, data.Kvalue, data.DictID, data.Code).Error
 	if err != nil {
 		return err
 	}
@@ -84,16 +84,12 @@ func (d *Database) UpdateDict(db *gorm.DB, updid int64, dictid int64, code int64
 }
 
 //EnableDict -
-func (d *Database) EnableDict(db *gorm.DB, updid int64, dictid int64, code int64, enable bool) error {
+func (d *Database) EnableDict(db *gorm.DB, updid int64, dictid int64, code int64, status int) error {
 	db = d.ValidDB(db)
 
-	val := 0
-	if enable {
-		val = 1
-	}
 	sql := "update dicts set update_user=?,status=? where dict=? and code=?"
 
-	err := db.Exec(sql, updid, val, dictid, code).Error
+	err := db.Exec(sql, updid, status, dictid, code).Error
 	if err != nil {
 		return err
 	}
@@ -101,16 +97,12 @@ func (d *Database) EnableDict(db *gorm.DB, updid int64, dictid int64, code int64
 }
 
 //EnableDicts -
-func (d *Database) EnableDicts(db *gorm.DB, updid int64, dictid int64, enable bool) error {
+func (d *Database) EnableDicts(db *gorm.DB, updid int64, dictid int64, status int) error {
 	db = d.ValidDB(db)
 
-	val := 0
-	if enable {
-		val = 1
-	}
 	sql := "update dicts set update_user=?,status=? where dict=?"
 
-	err := db.Exec(sql, updid, val, dictid).Error
+	err := db.Exec(sql, updid, status, dictid).Error
 	if err != nil {
 		return err
 	}
@@ -166,7 +158,8 @@ func (d *Database) AddDicts(db *gorm.DB, list []*models.Dict) error {
 
 		values = append(values, val)
 	}
-	sql := "insert into dicts(dict_id,code,kvalue,remark,status,update_user) values " + strings.Join(values, ",") + " on duplicate key update kvalue=values(kvalue),update_user=values(update_user)"
+	sql := "insert into dicts(dict_id,code,kvalue,remark,status,update_user) values " + strings.Join(values, ",") +
+		" on duplicate key update kvalue=values(kvalue),remark=values(remark),status=values(status),update_user=values(update_user)"
 	err := db.Exec(sql).Error
 	if err != nil {
 		return err

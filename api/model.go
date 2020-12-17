@@ -69,7 +69,7 @@ type Dict struct {
 	Code   int64  `jsont:"code"`
 	Value  string `jsont:"value"`
 	Remark string `jsont:"remark"`
-	Status bool   `jsont:"status"`
+	Status int    `jsont:"status"`
 }
 
 //Dicts -
