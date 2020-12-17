@@ -1,7 +1,23 @@
 # booking-server
 
 ## 開発日記
+  
+### 2020/12/16
 
+仮登録完了メールの送信  
+
+Dict 辞書
+- GET /dict 辞書情報を取得します
+- POST /dict 辞書情報を新規作成します
+- POST /dict/array 辞書情報を新規作成します（複数）
+  
+Account  
+- POST /admin/user 作成後メール送信
+- DELETE /account/user アカウントを削除します
+
+**実装済み**
+
+---
 ### 2020/12/16
 
 **実装済み**
