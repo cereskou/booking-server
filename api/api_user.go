@@ -21,7 +21,7 @@ import (
 func (s *Service) GetUser(c echo.Context) error {
 	logon := logonFromToken(c)
 
-	user, err := s.DB().GetUser(logon.Email)
+	user, err := s.DB().GetUser(nil, logon.Email)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			resp := Response{
@@ -55,7 +55,7 @@ func (s *Service) GetUser(c echo.Context) error {
 func (s *Service) GetAccount(c echo.Context) error {
 	logon := logonFromToken(c)
 
-	account, err := s.DB().GetAccount(logon.Email)
+	account, err := s.DB().GetAccount(nil, logon.Email)
 	if err != nil {
 		return echo.ErrBadRequest
 	}
@@ -90,11 +90,14 @@ func (s *Service) UpdateUser(c echo.Context) error {
 		return err
 	}
 
+	tx := s.DB().Begin()
 	//update
-	err := s.DB().UpdateUser(logon.ID, logon.Email, input)
+	err := s.DB().UpdateUser(tx, logon.ID, logon.Email, input)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
+	tx.Commit()
 
 	resp := Response{
 		Code: http.StatusOK,
@@ -125,12 +128,15 @@ func (s *Service) UpdatePassword(c echo.Context) error {
 
 	//generate password hash code
 	newHash := utils.HashPassword(pwd.NewPassword)
+	tx := s.DB().Begin()
 
 	//update password
-	err := s.DB().UpdatePassword(logon.Email, newHash, pwd.UpdateDate)
+	err := s.DB().UpdatePassword(tx, logon.Email, newHash, pwd.UpdateDate)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
+	tx.Commit()
 
 	//clear cache
 	s.CacheDel(logon.Email)

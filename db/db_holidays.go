@@ -4,12 +4,15 @@ import (
 	"ditto/booking/models"
 	"fmt"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 //HolidaysInsert -
-func (d *Database) HolidaysInsert(recs []*models.Holiday) error {
+func (d *Database) HolidaysInsert(db *gorm.DB, recs []*models.Holiday) error {
 	d.Lock()
 	defer d.Unlock()
+	db = d.ValidDB(db)
 
 	values := make([]string, 0)
 	for _, rec := range recs {
@@ -18,7 +21,7 @@ func (d *Database) HolidaysInsert(recs []*models.Holiday) error {
 		values = append(values, val)
 	}
 	sql := "insert into holidays(ymd,name,class,update_user) values " + strings.Join(values, ",") + " on duplicate key update name=values(name),,update_user=values(update_user)"
-	err := d.DB().Exec(sql).Error
+	err := db.Exec(sql).Error
 	if err != nil {
 		return err
 	}
@@ -27,16 +30,18 @@ func (d *Database) HolidaysInsert(recs []*models.Holiday) error {
 }
 
 // HolidaysSelect -
-func (d *Database) HolidaysSelect(year string) ([]*models.Holiday, error) {
+func (d *Database) HolidaysSelect(db *gorm.DB, year string) ([]*models.Holiday, error) {
+	db = d.ValidDB(db)
+
 	result := make([]*models.Holiday, 0)
-	rows, err := d.DB().Table("holidays").Where("year(ymd)=?", year).Rows()
+	rows, err := db.Table("holidays").Where("year(ymd)=?", year).Rows()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var record models.Holiday
-		if err := d.DB().ScanRows(rows, &record); err != nil {
+		if err := db.ScanRows(rows, &record); err != nil {
 			break
 		}
 

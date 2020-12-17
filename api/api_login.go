@@ -6,6 +6,7 @@ import (
 	"ditto/booking/models"
 	"ditto/booking/security"
 	"ditto/booking/utils"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -39,13 +40,13 @@ func (s *Service) Login(c echo.Context) error {
 		logger.Trace("Find user in db")
 		//
 		//get user from db
-		u, err := s.DB().GetAccount(login.Email)
+		u, err := s.DB().GetAccount(nil, login.Email)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, Unauthorized())
 		}
 		//confirmed
 		if u.EmailConfirmed == 0 {
-			return c.JSON(http.StatusBadRequest, BadRequest("account not confirmed"))
+			return c.JSON(http.StatusBadRequest, BadRequest(errors.New("account not confirmed")))
 		}
 		//compare password
 		if !utils.CompareHashedPassword(u.PasswordHash, login.Password) {
@@ -163,12 +164,16 @@ func (s *Service) ConfirmEmail(c echo.Context) error {
 	conf := config.Load()
 
 	//有効期間
-	expires := utils.HourToSecond(conf.ExpiresConfirm)
+	expires := utils.HourToSecond(conf.Confirm.Expires)
+	tx := s.DB().Begin()
+
 	//get confirm record
-	err := s.DB().ConfirmAccountWithCode(email, code, expires)
+	err := s.DB().ConfirmAccountWithCode(tx, email, code, expires)
 	if err != nil {
+		tx.Rollback()
 		return c.JSON(http.StatusNotFound, NewResponse(http.StatusNotFound, err.Error()))
 	}
+	tx.Commit()
 
 	resp := Response{
 		Code: http.StatusOK,

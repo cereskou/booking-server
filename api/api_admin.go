@@ -1,7 +1,10 @@
 package api
 
 import (
+	"ditto/booking/config"
 	"ditto/booking/logger"
+	"ditto/booking/mail"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -23,7 +26,7 @@ func (s *Service) AdminGetUser(c echo.Context) error {
 	email := c.Param("email")
 	email, _ = url.QueryUnescape(email)
 
-	user, err := s.DB().GetUser(email)
+	user, err := s.DB().GetUser(nil, email)
 	if err != nil {
 		resp := Response{
 			Code:  http.StatusNotFound,
@@ -56,7 +59,7 @@ func (s *Service) AdminGetAccount(c echo.Context) error {
 	email := c.Param("email")
 	email, _ = url.QueryUnescape(email)
 
-	user, err := s.DB().GetAccount(email)
+	user, err := s.DB().GetAccount(nil, email)
 	if err != nil {
 		resp := Response{
 			Code:  http.StatusNotFound,
@@ -98,11 +101,14 @@ func (s *Service) AdminUpdateUser(c echo.Context) error {
 		return err
 	}
 
+	tx := s.DB().Begin()
 	//update
-	err := s.DB().UpdateUser(logon.ID, email, input)
+	err := s.DB().UpdateUser(tx, logon.ID, email, input)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
+	tx.Commit()
 
 	resp := Response{
 		Code: http.StatusOK,
@@ -140,27 +146,98 @@ func (s *Service) AdminCreateAccount(c echo.Context) error {
 	// contact
 	// gender
 	// occupation
+	tx := s.DB().Begin()
 
 	//update
-	account, err := s.DB().CreateAccount(logon.ID, input)
+	account, err := s.DB().CreateAccount(tx, logon.ID, input)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	//Create a confirm code
-	confirm, err := s.DB().CreateConfirmCode(account)
+	confirm, err := s.DB().CreateConfirmCode(tx, account)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
+
 	//send mail
 	logger.Trace(confirm.ConfirmCode)
 
 	email := account.Email
 	//update
-	err = s.DB().UpdateUser(logon.ID, email, input)
+	err = s.DB().UpdateUser(tx, logon.ID, email, input)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
+
+	conf := config.Load()
+
+	url := fmt.Sprintf(conf.Confirm.URL, email, confirm.ConfirmCode)
+	val := map[string]interface{}{
+		"LessonName": "Lesson",
+		"Email":      email,
+		"Expire":     conf.Confirm.Expires,
+		"ConfirmURL": url,
+	}
+	mt, err := s.DB().GetMailTemplate(tx, 0, "mailconfirm")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	msend := mail.New()
+	body, err := msend.Render(mt.MailID, mt.Body, val)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = msend.Send(email, email, mt.Subject, body)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// AdminDeleteAcount - アカウント削除
+// @Summary アカウントを削除します(admin)
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Param email path string true "email"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /admin/user/{email} [delete]]
+func (s *Service) AdminDeleteAcount(c echo.Context) error {
+	logon := logonFromToken(c)
+	email := c.Param("email")
+	email, _ = url.QueryUnescape(email)
+
+	tx := s.DB().Begin()
+
+	//1. user delete
+	err := s.DB().DeleteUser(tx, email)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	//2. delete account
+	err = s.DB().DeleteAccount(tx, logon.ID, email)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
 
 	resp := Response{
 		Code: http.StatusOK,

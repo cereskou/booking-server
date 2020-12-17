@@ -55,6 +55,17 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 	//JST
 	jst, _ := time.LoadLocation("Asia/Tokyo")
 
+	//Transaction
+	var eoc bool = false
+	tx := s.DB().Begin()
+	defer func() {
+		if eoc {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
 	var count int64 = 0
 	recs := make([]*models.Holiday, 0)
 	var i int = 0
@@ -65,6 +76,7 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
+			eoc = true
 			return err
 		}
 
@@ -92,8 +104,9 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 		count++
 
 		if len(recs) > 100 {
-			err := s.DB().HolidaysInsert(recs)
+			err := s.DB().HolidaysInsert(tx, recs)
 			if err != nil {
+				eoc = true
 				return err
 			}
 			recs = recs[:0]
@@ -101,8 +114,9 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 	}
 	//余り分
 	if len(recs) > 0 {
-		err := s.DB().HolidaysInsert(recs)
+		err := s.DB().HolidaysInsert(tx, recs)
 		if err != nil {
+			eoc = true
 			return err
 		}
 		recs = recs[:0]
@@ -134,7 +148,7 @@ func (s *Service) ListHolidays(c echo.Context) error {
 	//use redis cache
 	err := s.CacheGet(key, &holidays)
 	if err != nil {
-		holidays, err = s.DB().HolidaysSelect(year)
+		holidays, err = s.DB().HolidaysSelect(nil, year)
 		if err != nil {
 			resp := Response{
 				Code:  http.StatusNotFound,

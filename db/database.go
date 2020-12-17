@@ -18,6 +18,7 @@ type Database struct {
 	Error error
 	Name  string
 	_db   *gorm.DB
+	_tx   *gorm.DB
 }
 
 //NewDatabase - cereate a new database

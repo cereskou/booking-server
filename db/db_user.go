@@ -11,12 +11,14 @@ import (
 )
 
 //UpdateUser -
-func (d *Database) UpdateUser(uid int64, email string, data map[string]interface{}) error {
+func (d *Database) UpdateUser(db *gorm.DB, uid int64, email string, data map[string]interface{}) error {
+	db = d.ValidDB(db)
+
 	//get id
 	sql := "select id from accounts where email = ?"
 
 	var id int64
-	result := d.DB().Raw(sql, email).Scan(&id)
+	result := db.Raw(sql, email).Scan(&id)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -34,7 +36,7 @@ func (d *Database) UpdateUser(uid int64, email string, data map[string]interface
 
 	//insert update
 	sql = "insert into users_detail(id,`option_key`,`option_val`,`update_user`) values " + strings.Join(values, ",") + " on duplicate key update option_val=values(option_val),update_user=values(update_user)"
-	err := d.DB().Exec(sql).Error
+	err := db.Exec(sql).Error
 	if err != nil {
 		return err
 	}
@@ -43,10 +45,12 @@ func (d *Database) UpdateUser(uid int64, email string, data map[string]interface
 }
 
 //UpdatePassword -
-func (d *Database) UpdatePassword(email, password string, upd time.Time) error {
+func (d *Database) UpdatePassword(db *gorm.DB, email, password string, upd time.Time) error {
+	db = d.ValidDB(db)
+
 	sql := "update accounts set password_hash=? where email=? and update_date=?"
 
-	err := d.DB().Exec(sql, password, email, upd).Error
+	err := db.Exec(sql, password, email, upd).Error
 	if err != nil {
 		return err
 	}
@@ -54,7 +58,9 @@ func (d *Database) UpdatePassword(email, password string, upd time.Time) error {
 }
 
 //GetUser -
-func (d *Database) GetUser(email string) (*models.User, error) {
+func (d *Database) GetUser(db *gorm.DB, email string) (*models.User, error) {
+	db = d.ValidDB(db)
+
 	//select user detail as a json format ("key":"value","key":"value")
 	sql := "select d.id, d.detail from (select id, GROUP_CONCAT(CONCAT_WS(':', CONCAT('\"',`option_key`,'\"'), CONCAT('\"',`option_val`,'\"'))) as detail from users_detail d group by id) d left join accounts a on (a.id = d.id) where a.email = ?"
 
@@ -62,7 +68,7 @@ func (d *Database) GetUser(email string) (*models.User, error) {
 		ID     int64
 		Detail string
 	}
-	result := d.DB().Raw(sql, email).Scan(&u)
+	result := db.Raw(sql, email).Scan(&u)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -82,4 +88,17 @@ func (d *Database) GetUser(email string) (*models.User, error) {
 	data.Email = email
 
 	return &data, nil
+}
+
+//DeleteUser -
+func (d *Database) DeleteUser(db *gorm.DB, email string) error {
+	db = d.ValidDB(db)
+
+	sql := "delete u from users_detail u left join accounts a on (a.id=u.id) where a.email=?"
+	err := db.Exec(sql, email).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

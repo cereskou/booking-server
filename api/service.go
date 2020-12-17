@@ -33,7 +33,7 @@ func New(db *db.Database, r *rsa.RSA, client *redis.Client) (*Service, error) {
 	s._enforcer = e
 
 	//Load casbin policies
-	policies, err := db.GetCasbinPolicies()
+	policies, err := db.GetCasbinPolicies(nil)
 	if err != nil {
 		return nil, err
 	}
