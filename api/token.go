@@ -2,6 +2,7 @@ package api
 
 import (
 	"ditto/booking/config"
+	"ditto/booking/cx"
 	"ditto/booking/security"
 	"ditto/booking/utils"
 	"time"
@@ -17,7 +18,7 @@ type Token struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func (s *Service) generateToken(d *Payload) (*Token, error) {
+func (s *Service) generateToken(d *cx.Payload) (*Token, error) {
 	conf := config.Load()
 
 	tm := time.Duration(conf.Expires)
