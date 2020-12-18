@@ -21,7 +21,7 @@ import (
 func (s *Service) GetUser(c echo.Context) error {
 	logon := logonFromToken(c)
 
-	user, err := s.DB().GetUser(nil, logon.Email)
+	user, err := s.DB().GetUser(nil, logon.ID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			resp := Response{
@@ -67,7 +67,6 @@ func (s *Service) GetAccount(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, resp)
-
 }
 
 // UpdateUser - ユーザー情報を更新します
@@ -92,7 +91,7 @@ func (s *Service) UpdateUser(c echo.Context) error {
 
 	tx := s.DB().Begin()
 	//update
-	err := s.DB().UpdateUser(tx, logon.ID, logon.Email, input)
+	err := s.DB().UpdateUser(tx, logon, logon.ID, input)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -131,7 +130,7 @@ func (s *Service) UpdatePassword(c echo.Context) error {
 	tx := s.DB().Begin()
 
 	//update password
-	err := s.DB().UpdatePassword(tx, logon.Email, newHash, pwd.UpdateDate)
+	err := s.DB().UpdatePassword(tx, logon, newHash, pwd.UpdateDate)
 	if err != nil {
 		tx.Rollback()
 		return err
