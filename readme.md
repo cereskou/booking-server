@@ -3,7 +3,30 @@
 ## 開発日記
 
 [実装済みAPI](api.md)
+  
+### 2020/12/18
+  
+**実装済み**
 
+テナントの管理機能
+Tenant
+- POST /tenant テナントの仮作成を行います
+- GET /tenant/users ユーザー一覧を取得します（ログイン中）
+
+Admin/tenant
+- GET /admin/tenant テナント情報を取得します(admin)
+- POST /admin/tenant テナントを新規作成します(admin)
+- PUT /admin/tenant/{id} テナント情報を更新します(admin)
+- DELETE /admin/tenant/{id} テナント情報を削除します(admin)
+
+User
+- GET /user/tenants ユーザーの所属テナント一覧を取得します
+- PUT /user/tenans/{id} ユーザーの所属テナントをアクティブします
+- GET /user/logout ログアウト
+<br>
+<br>
+
+---
 ### 2020/12/17
   
 **実装済み**
