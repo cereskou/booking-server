@@ -2,6 +2,7 @@ package api
 
 import (
 	"ditto/booking/models"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -34,7 +35,6 @@ func (s *Service) GetDict(c echo.Context) error {
 	resp := Response{
 		Code: http.StatusOK,
 	}
-
 	if dictid == 0 {
 		dicts, err := s.DB().GetAllDicts(nil)
 		if err != nil {
@@ -89,10 +89,15 @@ func (s *Service) AddDict(c echo.Context) error {
 		return err
 	}
 
+	if data.Code <= 0 {
+		return c.JSON(http.StatusBadRequest, BadRequest(errors.New("Code is 1-based integer")))
+	}
+
 	tx := s.DB().Begin()
 
 	//update password
 	rec := models.Dict{
+		TenantID:   logon.Tenant,
 		DictID:     int(data.DictID),
 		Code:       int(data.Code),
 		Kvalue:     data.Value,
@@ -135,8 +140,9 @@ func (s *Service) AddDicts(c echo.Context) error {
 	}
 
 	values := make([]*models.Dict, 0)
-	for _, v := range data.Dict {
+	for _, v := range data.DictList {
 		values = append(values, &models.Dict{
+			TenantID:   logon.Tenant,
 			DictID:     int(v.DictID),
 			Code:       int(v.Code),
 			Kvalue:     v.Value,
@@ -193,14 +199,14 @@ func (s *Service) EnableDict(c echo.Context) error {
 
 	tx := s.DB().Begin()
 
-	if code >= 0 {
-		err = s.DB().EnableDict(tx, logon.ID, dictid, code, int(status))
+	if code > 0 {
+		err = s.DB().EnableDict(tx, logon, dictid, code, int(status))
 		if err != nil {
 			tx.Rollback()
 			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
 		}
 	} else {
-		err = s.DB().EnableDicts(tx, logon.ID, dictid, int(status))
+		err = s.DB().EnableDicts(tx, logon, dictid, int(status))
 		if err != nil {
 			tx.Rollback()
 			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
@@ -241,10 +247,15 @@ func (s *Service) UpdateDict(c echo.Context) error {
 		return err
 	}
 
+	if data.Code <= 0 {
+		return c.JSON(http.StatusBadRequest, BadRequest(errors.New("Code is 1-based integer")))
+	}
+
 	tx := s.DB().Begin()
 
 	//update password
 	rec := models.Dict{
+		TenantID:   logon.Tenant,
 		DictID:     int(dictid),
 		Code:       int(data.Code),
 		Kvalue:     data.Value,
@@ -252,7 +263,7 @@ func (s *Service) UpdateDict(c echo.Context) error {
 		Status:     data.Status,
 		UpdateUser: logon.ID,
 	}
-	err = s.DB().UpdateDict(tx, logon.ID, &rec)
+	err = s.DB().UpdateDict(tx, logon, &rec)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -279,4 +290,53 @@ func (s *Service) UpdateDict(c echo.Context) error {
 // @Router /dict/array [put]
 func (s *Service) UpdateDicts(c echo.Context) error {
 	return s.AddDicts(c)
+}
+
+// DeleteDict - 辞書情報削除
+// @Summary 辞書情報を削除します（複数）
+// @Tags Dict
+// @Accept json
+// @Produce json
+// @Param dictid query int true "辞書番号"
+// @Param code query int false "コード(0:全部)"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /dict [delete]
+func (s *Service) DeleteDict(c echo.Context) error {
+	logon := logonFromToken(c)
+
+	dictid, err := strconv.ParseInt(c.QueryParam("dictid"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	}
+	code, err := strconv.ParseInt(c.QueryParam("code"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	}
+
+	tx := s.DB().Begin()
+
+	if code >= 0 {
+		err = s.DB().DeleteDict(tx, logon, dictid, code)
+		if err != nil {
+			tx.Rollback()
+			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		}
+	} else {
+		err = s.DB().DeleteDicts(tx, logon, dictid)
+		if err != nil {
+			tx.Rollback()
+			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		}
+	}
+
+	tx.Commit()
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
