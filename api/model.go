@@ -30,22 +30,15 @@ type Empty struct{}
 
 //Login -
 type Login struct {
-	Email    string `json:"email"`
+	Email    string `json:"account"`
 	Password string `json:"password"`
+	Tenant   int64  `json:"tenat_id,omitempty"`
 }
 
 //RefreshToken -
 type RefreshToken struct {
 	GrantType string `json:"grant_type"`
 	Token     string `json:"refresh_token"`
-}
-
-//Payload - access token payload
-type Payload struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Role  string `json:"role"`
 }
 
 //User - update user password
@@ -65,14 +58,14 @@ type Password struct {
 
 //Dict -
 type Dict struct {
-	DictID int64  `jsont:"dictid"`
-	Code   int64  `jsont:"code"`
-	Value  string `jsont:"value"`
-	Remark string `jsont:"remark"`
-	Status int    `jsont:"status"`
+	DictID int64  `json:"dict_id"`
+	Code   int64  `json:"code"`
+	Value  string `json:"value"`
+	Remark string `json:"remark"`
+	Status int    `json:"status"`
 }
 
 //Dicts -
 type Dicts struct {
-	Dict []*Dict `jsont:"dicts"`
+	DictList []*Dict `json:"dicts"`
 }
