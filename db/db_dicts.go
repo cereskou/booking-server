@@ -1,6 +1,7 @@
 package db
 
 import (
+	"ditto/booking/cx"
 	"ditto/booking/models"
 	"fmt"
 	"strings"
@@ -71,12 +72,12 @@ func (d *Database) GetAllDicts(db *gorm.DB) ([]*models.Dict, error) {
 }
 
 //UpdateDict -
-func (d *Database) UpdateDict(db *gorm.DB, updid int64, data *models.Dict) error {
+func (d *Database) UpdateDict(db *gorm.DB, logon *cx.Payload, data *models.Dict) error {
 	db = d.ValidDB(db)
 
 	sql := "update dicts set update_user=?,kvalue=? where dict=? and code=?"
 
-	err := db.Exec(sql, updid, data.Kvalue, data.DictID, data.Code).Error
+	err := db.Exec(sql, logon.ID, data.Kvalue, data.DictID, data.Code).Error
 	if err != nil {
 		return err
 	}
@@ -84,12 +85,12 @@ func (d *Database) UpdateDict(db *gorm.DB, updid int64, data *models.Dict) error
 }
 
 //EnableDict -
-func (d *Database) EnableDict(db *gorm.DB, updid int64, dictid int64, code int64, status int) error {
+func (d *Database) EnableDict(db *gorm.DB, logon *cx.Payload, dictid int64, code int64, status int) error {
 	db = d.ValidDB(db)
 
 	sql := "update dicts set update_user=?,status=? where dict=? and code=?"
 
-	err := db.Exec(sql, updid, status, dictid, code).Error
+	err := db.Exec(sql, logon.ID, status, dictid, code).Error
 	if err != nil {
 		return err
 	}
@@ -97,12 +98,12 @@ func (d *Database) EnableDict(db *gorm.DB, updid int64, dictid int64, code int64
 }
 
 //EnableDicts -
-func (d *Database) EnableDicts(db *gorm.DB, updid int64, dictid int64, status int) error {
+func (d *Database) EnableDicts(db *gorm.DB, logon *cx.Payload, dictid int64, status int) error {
 	db = d.ValidDB(db)
 
 	sql := "update dicts set update_user=?,status=? where dict=?"
 
-	err := db.Exec(sql, updid, status, dictid).Error
+	err := db.Exec(sql, logon.ID, status, dictid).Error
 	if err != nil {
 		return err
 	}
@@ -110,12 +111,12 @@ func (d *Database) EnableDicts(db *gorm.DB, updid int64, dictid int64, status in
 }
 
 //DeleteDict -
-func (d *Database) DeleteDict(db *gorm.DB, dictid int64, code int64) error {
+func (d *Database) DeleteDict(db *gorm.DB, logon *cx.Payload, dictid int64, code int64) error {
 	db = d.ValidDB(db)
 
-	sql := "delete dicts where dict=? and code=?"
+	sql := "delete from dicts where tenant_id=? and dict_id=? and code=?"
 
-	err := db.Exec(sql, dictid, code).Error
+	err := db.Exec(sql, logon.Tenant, dictid, code).Error
 	if err != nil {
 		return err
 	}
@@ -123,12 +124,12 @@ func (d *Database) DeleteDict(db *gorm.DB, dictid int64, code int64) error {
 }
 
 //DeleteDicts -
-func (d *Database) DeleteDicts(db *gorm.DB, dictid int64) error {
+func (d *Database) DeleteDicts(db *gorm.DB, logon *cx.Payload, dictid int64) error {
 	db = d.ValidDB(db)
 
-	sql := "delete dicts where dict=?"
+	sql := "delete from dicts where tenant_id=? and dict_id=?"
 
-	err := db.Exec(sql, dictid).Error
+	err := db.Exec(sql, logon.Tenant, dictid).Error
 	if err != nil {
 		return err
 	}

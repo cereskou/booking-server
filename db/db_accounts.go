@@ -1,6 +1,7 @@
 package db
 
 import (
+	"ditto/booking/cx"
 	"ditto/booking/models"
 	"ditto/booking/utils"
 
@@ -14,9 +15,29 @@ func (d *Database) GetAccount(db *gorm.DB, email string) (*models.AccountWithRol
 	data := models.AccountWithRole{}
 
 	//select user and users_roles
-	sql := "select u.*, d.option_val as name, s.role from accounts u left join (select ur.account_id, GROUP_CONCAT(r.name) as role from accounts_roles ur left join roles r on (ur.role_id = r.id) group by ur.account_id) s on (s.account_id = u.id) left join users_detail d on (u.id = d.id and d.`option_key`='name') where u.email = ?"
+	sql := "select u.*,d.option_val as name, s.role,t.tenant_id as tenant from accounts u left join (select ur.account_id, GROUP_CONCAT(r.name) as role from accounts_roles ur left join roles r on (ur.role_id = r.id) group by ur.account_id) s on (s.account_id = u.id) left join users_detail d on (u.id = d.id and d.`option_key`='name') left join tenants_users t on (u.id=t.user_id and t.right=1) where u.email = ?"
 
 	result := db.Raw(sql, email).Scan(&data)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected <= 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return &data, nil
+}
+
+//GetAccountByID -
+func (d *Database) GetAccountByID(db *gorm.DB, id int64) (*models.AccountWithRole, error) {
+	db = d.ValidDB(db)
+
+	data := models.AccountWithRole{}
+
+	//select user and users_roles
+	sql := "select u.*,d.option_val as name, s.role,t.tenant_id as tenant from accounts u left join (select ur.account_id, GROUP_CONCAT(r.name) as role from accounts_roles ur left join roles r on (ur.role_id = r.id) group by ur.account_id) s on (s.account_id = u.id) left join users_detail d on (u.id = d.id and d.`option_key`='name') left join tenants_users t on (u.id=t.user_id) where u.id = ?"
+
+	result := db.Raw(sql, id).Scan(&data)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -28,7 +49,7 @@ func (d *Database) GetAccount(db *gorm.DB, email string) (*models.AccountWithRol
 }
 
 //CreateAccount -
-func (d *Database) CreateAccount(db *gorm.DB, updid int64, vmap map[string]interface{}) (*models.Account, error) {
+func (d *Database) CreateAccount(db *gorm.DB, logon *cx.Payload, vmap map[string]interface{}) (*models.Account, error) {
 	db = d.ValidDB(db)
 
 	// input check
@@ -44,14 +65,12 @@ func (d *Database) CreateAccount(db *gorm.DB, updid int64, vmap map[string]inter
 	data := models.Account{}
 	data.Email = vmap["email"].(string)
 	data.PasswordHash = utils.HashPassword(vmap["password"].(string))
-	data.UpdateUser = updid
+	data.UpdateUser = logon.ID
 	result := db.Create(&data)
 
 	if result.Error != nil {
 		return nil, result.Error
 	}
-
-	//create a confirm_record
 
 	return &data, nil
 }
@@ -109,12 +128,12 @@ func (d *Database) DelConfirm(db *gorm.DB, id int64) error {
 }
 
 //ConfirmAccount -
-func (d *Database) ConfirmAccount(db *gorm.DB, uid int64) error {
+func (d *Database) ConfirmAccount(db *gorm.DB, logon *cx.Payload, uid int64) error {
 	db = d.ValidDB(db)
 
-	sql := "update accounts set email_confirmed=1 where id=?"
+	sql := "update accounts set email_confirmed=1,update_user=? where id=?"
 
-	err := db.Exec(sql, uid).Error
+	err := db.Exec(sql, logon.ID, uid).Error
 	if err != nil {
 		return err
 	}
@@ -144,11 +163,11 @@ func (d *Database) ConfirmAccountWithCode(db *gorm.DB, email string, code string
 }
 
 //DeleteAccount -
-func (d *Database) DeleteAccount(db *gorm.DB, updid int64, email string) error {
+func (d *Database) DeleteAccount(db *gorm.DB, logon *cx.Payload, id int64) error {
 	db = d.ValidDB(db)
 
-	sql := "delete from accounts where email=?"
-	err := db.Exec(sql, email).Error
+	sql := "delete from accounts where id=?"
+	err := db.Exec(sql, id).Error
 	if err != nil {
 		return err
 	}
