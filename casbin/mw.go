@@ -100,10 +100,11 @@ func roleFromToken(c echo.Context) string {
 
 	payload := security.DecryptString(secret)
 	var d struct {
-		ID    int64  `json:"id"`
-		Email string `json:"email"`
-		Name  string `json:"name"`
-		Role  string `json:"role"`
+		ID       int64  `json:"id"`
+		Email    string `json:"email"`
+		Name     string `json:"name"`
+		Role     string `json:"role"`
+		TenantID int64  `json:"tenantid"`
 	}
 	err := utils.JSON.NewDecoder(strings.NewReader(payload)).Decode(&d)
 	if err != nil {
