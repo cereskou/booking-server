@@ -1,6 +1,7 @@
 package api
 
 import (
+	"ditto/booking/cx"
 	"ditto/booking/security"
 	"ditto/booking/utils"
 	"net/http"
@@ -51,14 +52,14 @@ func NewResponse(code int, msg string) *Response {
 }
 
 //logonFromToken - get logon user from token
-func logonFromToken(c echo.Context) *Payload {
+func logonFromToken(c echo.Context) *cx.Payload {
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
 
 	secret := claims["uuid"].(string)
 	payload := security.DecryptString(secret)
 
-	var d Payload
+	var d cx.Payload
 	err := utils.JSON.NewDecoder(strings.NewReader(payload)).Decode(&d)
 	if err != nil {
 		return nil
