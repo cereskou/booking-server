@@ -2,6 +2,7 @@ package api
 
 import (
 	"ditto/booking/config"
+	"ditto/booking/cx"
 	"ditto/booking/logger"
 	"ditto/booking/models"
 	"ditto/booking/security"
@@ -15,6 +16,31 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/labstack/echo/v4"
 )
+
+// Logout - ログアウト
+// @Summary ログアウト
+// @Tags User
+// @Accept json
+// @Produce json
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /user/logout [get]
+func (s *Service) Logout(c echo.Context) error {
+	logon := logonFromToken(c)
+
+	err := s.CacheDel(logon.Email)
+	if err != nil {
+		return err
+	}
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
 
 // Login - ログイン
 // @Summary ログイン
@@ -70,11 +96,12 @@ func (s *Service) Login(c echo.Context) error {
 	}
 
 	//payload
-	d := Payload{
-		ID:    user.ID,
-		Email: user.Email,
-		Name:  user.Name,
-		Role:  user.Role,
+	d := cx.Payload{
+		ID:     user.ID,
+		Email:  user.Email,
+		Name:   user.Name,
+		Role:   user.Role,
+		Tenant: user.TenantID,
 	}
 	//create a token
 	token, err := s.generateToken(&d)
@@ -124,7 +151,7 @@ func (s *Service) RefreshToken(c echo.Context) error {
 		secret := claims["sub"].(string)
 		payload := security.DecryptString(secret)
 
-		var d Payload
+		var d cx.Payload
 		err := utils.JSON.NewDecoder(strings.NewReader(payload)).Decode(&d)
 		if err != nil {
 			return err
