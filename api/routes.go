@@ -81,3 +81,13 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	t.GET("/users", s.TenantListUser)
 	t.POST("", s.CreateTenant)
 }
+
+//traceID -
+func (s *Service) traceID(c echo.Context) string {
+	return c.Request().Header.Get("x-trace")
+}
+
+//spanID -
+func (s *Service) spanID(c echo.Context) string {
+	return c.Request().Header.Get("x-span")
+}

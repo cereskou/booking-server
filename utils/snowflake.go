@@ -35,3 +35,13 @@ func GeerateIDBase36() string {
 
 	return id.Base36()
 }
+
+// GenerateTraceID -
+func GenerateTraceID() string {
+	if node == nil {
+		node, _ = snowflake.NewNode(1)
+	}
+	id := node.Generate()
+
+	return id.Base36()
+}

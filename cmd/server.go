@@ -5,7 +5,9 @@ import (
 	"ditto/booking/db"
 	"ditto/booking/logger"
 	"ditto/booking/services"
+	"ditto/booking/utils"
 	"fmt"
+	"html"
 	"net/http"
 	"time"
 
@@ -50,6 +52,7 @@ func RunServer(db *db.Database) error {
 
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+	e.Use(tenantMiddleware())
 
 	//swagger
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
@@ -82,4 +85,30 @@ func RunServer(db *db.Database) error {
 	logger.Info("Stop")
 
 	return nil
+}
+
+//set tenant
+func tenantMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			r := c.Request()
+			reqid := r.Header.Get("x-trace")
+			if reqid == "" {
+				reqid = utils.GenerateTraceID()
+
+				r.Header.Add("x-trace", reqid)
+			}
+
+			//span id
+			span := utils.GenerateSpanID()
+			r.Header.Add("x-span", span)
+
+			//before
+			fmt.Println(reqid, r.Method, html.EscapeString(r.URL.Path))
+			//action
+			err := next(c)
+			//after
+			return err
+		}
+	}
 }
