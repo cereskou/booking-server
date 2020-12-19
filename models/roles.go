@@ -2,8 +2,8 @@ package models
 
 import "time"
 
-//Roles -
-type Roles struct {
+//Role -
+type Role struct {
 	ID         int64     `json:"id" gorm:"column:id;primary_key"`       //Id
 	Name       string    `json:"name" gorm:"column:name"`               //ロール名
 	UpdateUser int64     `json:"update_user" gorm:"column:update_user"` //更新者
@@ -11,6 +11,6 @@ type Roles struct {
 }
 
 // TableName sets the insert table name for this struct type
-func (r *Roles) TableName() string {
+func (r *Role) TableName() string {
 	return "roles"
 }
