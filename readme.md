@@ -4,6 +4,27 @@
 
 [実装済みAPI](api.md)
   
+
+### 2020/12/20
+  
+**実装済み**
+  
+エラー時の戻り値やり直し
+
+```
+//Response -
+type Response struct {
+	Code  int         `json:"code"`
+	Error string      `json:"error,omitempty"`
+	Data  interface{} `json:"data,omitempty"`
+}
+```
+  
+Tenant
+- POST /tenant/user ユーザーを作成します（テナント）
+- DELETE /tenant/user/{id} ユーザーを削除します（テナント）
+
+---
 ### 2020/12/18
   
 **実装済み**
