@@ -92,6 +92,14 @@ type ConfirmConfig struct {
 	Expires int64  `json:"expires"` //アカウント作成時確認コードの有効期限（時間）
 }
 
+//RoleConfig -
+type RoleConfig struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Default     bool   `json:"default"`
+}
+
 //Config -
 type Config struct {
 	Error    error            `json:"-"`        //Error
@@ -104,15 +112,16 @@ type Config struct {
 	Port     int              `json:"port"`     //ポート
 	BaseURL  string           `json:"baseurl"`  //BaseURL
 	Timeout  int              `json:"timeout"`  //タイムアウト（秒）
-	Log      Log              `json:"log"`      //ログ
 	Expires  int64            `json:"expires"`  //token expires in hour (access token)（時間）
-	Rsa      RsaConfig        `json:"rsa"`      //Rsa key
-	Db       DbConfig         `json:"db"`       //DB設定
+	Log      *Log             `json:"log"`      //ログ
+	Rsa      *RsaConfig       `json:"rsa"`      //Rsa key
+	Db       *DbConfig        `json:"db"`       //DB設定
 	Account  []*AccountConfig `json:"account"`  //account
-	Cache    CacheConfig      `json:"cache"`    //Cache server (redis)
-	Holidays HolidaysConfig   `json:"holidays"` //Holidays
-	Mail     SMTPConfig       `json:"smtp"`     //送信サーバー設定
-	Confirm  ConfirmConfig    `json:"confirm"`  //登録確認
+	Cache    *CacheConfig     `json:"cache"`    //Cache server (redis)
+	Holidays *HolidaysConfig  `json:"holidays"` //Holidays
+	Mail     *SMTPConfig      `json:"smtp"`     //送信サーバー設定
+	Confirm  *ConfirmConfig   `json:"confirm"`  //登録確認
+	Roles    []*RoleConfig    `json:"roles"`    //ロール - db table is roles
 }
 
 //Load -
@@ -203,6 +212,16 @@ func (c *Config) Init() {
 	}
 }
 
+//DefaultRole -
+func (c *Config) DefaultRole() *RoleConfig {
+	for _, r := range c.Roles {
+		if r.Default {
+			return r
+		}
+	}
+	return nil
+}
+
 //getLogFilename -
 func getLogFilename(format string) string {
 	logfile := "booking.log" //20060102150405
@@ -223,7 +242,7 @@ func getLogFilename(format string) string {
 					fstr = strings.ReplaceAll(fstr, "MM", "04")
 					fstr = strings.ReplaceAll(fstr, "SS", "05")
 
-					logfile = fmt.Sprintf(ffmt, utils.NowJST().Format(fstr)) //20060102150405
+					logfile = fmt.Sprintf(ffmt, utils.NowJST().Time().Format(fstr)) //20060102150405
 				}
 			}
 		}
