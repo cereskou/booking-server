@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"ditto/booking/api"
 	"ditto/booking/config"
 	"ditto/booking/db"
 	"ditto/booking/logger"
@@ -40,6 +41,9 @@ func RunServer(db *db.Database) error {
 		if err := client.Ping().Err(); err != nil {
 			logger.Error(err)
 		}
+
+		//Clear login
+		utils.RedisMultiDel(client, "ACCN_*")
 	}
 
 	//InitService
@@ -53,6 +57,8 @@ func RunServer(db *db.Database) error {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(tenantMiddleware())
+
+	e.HTTPErrorHandler = api.CustomHTTPErrorHandler
 
 	//swagger
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
@@ -104,7 +110,7 @@ func tenantMiddleware() echo.MiddlewareFunc {
 			r.Header.Add("x-span", span)
 
 			//before
-			fmt.Println(reqid, r.Method, html.EscapeString(r.URL.Path))
+			logger.Tracef("%v %v %v", reqid, r.Method, html.EscapeString(r.URL.Path))
 			//action
 			err := next(c)
 			//after
