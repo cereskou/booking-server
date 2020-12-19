@@ -80,6 +80,9 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	t.Use(casbinmw.Middleware(s._enforcer))
 	t.GET("/users", s.TenantListUser)
 	t.POST("", s.CreateTenant)
+	//create a user
+	t.POST("/user", s.TenantCreateUser)
+	t.DELETE("/user/:id", s.TenantDeleteUser)
 }
 
 //traceID -
