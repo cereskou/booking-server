@@ -32,7 +32,6 @@ type Empty struct{}
 type Login struct {
 	Email    string `json:"account"`
 	Password string `json:"password"`
-	Tenant   int64  `json:"tenat_id,omitempty"`
 }
 
 //RefreshToken -
