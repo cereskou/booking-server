@@ -1,7 +1,6 @@
 package mw
 
 import (
-	"ditto/booking/security"
 	"ditto/booking/utils"
 	"errors"
 	"net/http"
@@ -98,13 +97,12 @@ func roleFromToken(c echo.Context) string {
 
 	secret := claims["uuid"].(string)
 
-	payload := security.DecryptString(secret)
+	// payload := security.DecryptString(secret)
+	payload := secret
 	var d struct {
-		ID       int64  `json:"id"`
-		Email    string `json:"email"`
-		Name     string `json:"name"`
-		Role     string `json:"role"`
-		TenantID int64  `json:"tenantid"`
+		ID    int64  `json:"id"`
+		Email string `json:"email"`
+		Role  string `json:"role"`
 	}
 	err := utils.JSON.NewDecoder(strings.NewReader(payload)).Decode(&d)
 	if err != nil {
