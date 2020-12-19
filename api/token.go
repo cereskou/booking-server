@@ -3,7 +3,6 @@ package api
 import (
 	"ditto/booking/config"
 	"ditto/booking/cx"
-	"ditto/booking/security"
 	"ditto/booking/utils"
 	"time"
 
@@ -30,12 +29,13 @@ func (s *Service) generateToken(d *cx.Payload) (*Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	secret := security.EncryptSlice(b)
+	//secret := security.EncryptSlice(b)
+	secret := string(b)
 
 	//set claims
 	claims := token.Claims.(jwt.MapClaims)
 	claims["uuid"] = secret
-	claims["exp"] = utils.NowJST().Add(time.Hour * tm).Unix()
+	claims["exp"] = utils.NowJST().Time().Add(time.Hour * tm).Unix()
 
 	//generate encoded token
 	t, err := token.SignedString(s._rsa.GetPrivateKey())
@@ -43,13 +43,14 @@ func (s *Service) generateToken(d *cx.Payload) (*Token, error) {
 		return nil, err
 	}
 
-	secret = security.EncryptSlice(b)
+	// secret = security.EncryptSlice(b)
+	secret = string(b)
 	expires := int64(time.Hour * rftm / time.Millisecond)
 	//refresh token
 	refreshtoken := jwt.New(jwt.SigningMethodRS512)
 	rclaims := refreshtoken.Claims.(jwt.MapClaims)
 	rclaims["sub"] = secret
-	rclaims["exp"] = utils.NowJST().Add(time.Hour * rftm).Unix()
+	rclaims["exp"] = utils.NowJST().Time().Add(time.Hour * rftm).Unix()
 
 	//generate encoded token
 	rt, err := refreshtoken.SignedString(s._rsa.GetPrivateKey())
