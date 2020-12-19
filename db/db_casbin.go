@@ -24,6 +24,9 @@ func (d *Database) GetCasbinPolicies(db *gorm.DB) ([]*models.CasbinRule, error) 
 
 		result = append(result, &record)
 	}
+	if len(result) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 
 	return result, nil
 }

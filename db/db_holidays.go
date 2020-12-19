@@ -47,6 +47,9 @@ func (d *Database) HolidaysSelect(db *gorm.DB, year string) ([]*models.Holiday, 
 
 		result = append(result, &record)
 	}
+	if len(result) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 
 	return result, nil
 }

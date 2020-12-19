@@ -14,7 +14,7 @@ func (d *Database) GetAccount(db *gorm.DB, email string) (*models.AccountWithRol
 
 	data := models.AccountWithRole{}
 
-	//select user and users_roles
+	//select user and accounts_roles
 	sql := "select u.*,d.option_val as name, s.role,t.tenant_id as tenant from accounts u left join (select ur.account_id, GROUP_CONCAT(r.name) as role from accounts_roles ur left join roles r on (ur.role_id = r.id) group by ur.account_id) s on (s.account_id = u.id) left join users_detail d on (u.id = d.id and d.`option_key`='name') left join tenants_users t on (u.id=t.user_id and t.right=1) where u.email = ?"
 
 	result := db.Raw(sql, email).Scan(&data)
@@ -34,14 +34,14 @@ func (d *Database) GetAccountByID(db *gorm.DB, id int64) (*models.AccountWithRol
 
 	data := models.AccountWithRole{}
 
-	//select user and users_roles
+	//select user and accounts_roles
 	sql := "select u.*,d.option_val as name, s.role,t.tenant_id as tenant from accounts u left join (select ur.account_id, GROUP_CONCAT(r.name) as role from accounts_roles ur left join roles r on (ur.role_id = r.id) group by ur.account_id) s on (s.account_id = u.id) left join users_detail d on (u.id = d.id and d.`option_key`='name') left join tenants_users t on (u.id=t.user_id) where u.id = ?"
 
 	result := db.Raw(sql, id).Scan(&data)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	if result.RowsAffected == -1 {
+	if result.RowsAffected <= -1 {
 		return nil, gorm.ErrRecordNotFound
 	}
 
@@ -106,7 +106,7 @@ func (d *Database) GetConfirm(db *gorm.DB, email string, code string) (*models.A
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	if result.RowsAffected == -1 {
+	if result.RowsAffected <= -1 {
 		return nil, gorm.ErrRecordNotFound
 	}
 

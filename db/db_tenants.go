@@ -57,13 +57,10 @@ func (d *Database) GetTenant(db *gorm.DB, logon *cx.Payload, id int64, name stri
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	if result.RowsAffected == -1 {
+	if result.RowsAffected <= 0 {
 		return nil, gorm.ErrRecordNotFound
 	}
 
-	if result.Error != nil {
-		return nil, result.Error
-	}
 	data.Detail = "{" + data.Detail + "}"
 
 	err := utils.JSON.NewDecoder(strings.NewReader(data.Detail)).Decode(&data.Extra)
@@ -158,8 +155,26 @@ func (d *Database) AddUserToTenant(db *gorm.DB, logon *cx.Payload, users []*mode
 	return nil
 }
 
-//GetTenantUsesr -
-func (d *Database) GetTenantUsesr(db *gorm.DB, logon *cx.Payload, tid int64) ([]*models.TenantUsers, error) {
+//RemoveUserFromTenant -
+func (d *Database) RemoveUserFromTenant(db *gorm.DB, logon *cx.Payload, tid int64, uids []int64) error {
+	db = d.ValidDB(db)
+
+	ids := make([]string, 0)
+	for _, id := range uids {
+		ids = append(ids, fmt.Sprintf("%v", id))
+	}
+	//delete
+	sql := "delete from tenants_users where `tenant_id`=? and user_id in(?)"
+	err := db.Exec(sql, tid, strings.Join(ids, ",")).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//GetTenantUser -
+func (d *Database) GetTenantUser(db *gorm.DB, logon *cx.Payload, tid int64) ([]*models.TenantUsers, error) {
 	db = d.ValidDB(db)
 
 	//delete tenants_detail
@@ -177,8 +192,29 @@ func (d *Database) GetTenantUsesr(db *gorm.DB, logon *cx.Payload, tid int64) ([]
 
 		result = append(result, &record)
 	}
+	if len(result) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 
 	return result, nil
+}
+
+//GetUserTenant -
+func (d *Database) GetUserTenant(db *gorm.DB, uid int64) (*models.TenantUsers, error) {
+	db = d.ValidDB(db)
+
+	var record models.TenantUsers
+	result := db.Table(record.TableName()).
+		Where("`user_id`=? and `right`=1", uid).
+		First(&record)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected <= 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return &record, nil
 }
 
 //GetUserTenants -
@@ -198,6 +234,9 @@ func (d *Database) GetUserTenants(db *gorm.DB, logon *cx.Payload, uid int64) ([]
 		}
 
 		result = append(result, &record)
+	}
+	if len(result) == 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	return result, nil
@@ -222,4 +261,28 @@ func (d *Database) ChangeUserTenant(db *gorm.DB, logon *cx.Payload, tid int64) e
 	}
 
 	return nil
+}
+
+//TenantCreateUser -
+func (d *Database) TenantCreateUser(db *gorm.DB, logon *cx.Payload, vmap map[string]interface{}) (*models.Account, error) {
+	db = d.ValidDB(db)
+
+	data := models.Account{}
+	data.Email = vmap["email"].(string)
+	data.PasswordHash = utils.HashPassword(vmap["password"].(string))
+	data.UpdateUser = logon.ID
+	result := db.Create(&data)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	//add user to tenant
+	sql := "insert into tenants_users(`tenant_id`,`user_id`,`right`,`update_user`) values (?,?,?,?)"
+	err := db.Exec(sql, logon.Tenant, data.ID, 1, logon.ID)
+	if err.Error != nil {
+		return nil, err.Error
+	}
+
+	return &data, nil
 }

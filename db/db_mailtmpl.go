@@ -17,5 +17,8 @@ func (d *Database) GetMailTemplate(db *gorm.DB, tenantid int64, mailid string) (
 	if result.Error != nil {
 		return nil, result.Error
 	}
+	if result.RowsAffected <= 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 	return &record, nil
 }

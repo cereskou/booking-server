@@ -45,6 +45,9 @@ func (d *Database) GetDicts(db *gorm.DB, dictid int64) ([]*models.Dict, error) {
 
 		result = append(result, &record)
 	}
+	if len(result) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
 
 	return result, nil
 }
@@ -66,6 +69,9 @@ func (d *Database) GetAllDicts(db *gorm.DB) ([]*models.Dict, error) {
 		}
 
 		result = append(result, &record)
+	}
+	if len(result) == 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	return result, nil
@@ -137,7 +143,7 @@ func (d *Database) DeleteDicts(db *gorm.DB, logon *cx.Payload, dictid int64) err
 }
 
 //AddDict -
-func (d *Database) AddDict(db *gorm.DB, rec *models.Dict) error {
+func (d *Database) AddDict(db *gorm.DB, logon *cx.Payload, rec *models.Dict) error {
 	db = d.ValidDB(db)
 
 	sql := "insert into dicts(dict_id,code,kvalue,remark,status,update_user) values (?,?,?,?,?,?)"
