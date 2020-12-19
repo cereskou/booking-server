@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 // AdminGetUser - ユーザー情報
@@ -26,19 +27,20 @@ import (
 // @Router /admin/user/{id} [get]
 func (s *Service) AdminGetUser(c echo.Context) error {
 	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is required"))
+	}
 	uid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	user, err := s.DB().GetUser(nil, uid)
 	if err != nil {
-		resp := Response{
-			Code:  http.StatusNotFound,
-			Error: err.Error(),
+		if err == gorm.ErrRecordNotFound {
+			return NotFound(err)
 		}
-
-		return c.JSON(http.StatusNotFound, resp)
+		return InternalServerError(err)
 	}
 
 	resp := Response{
@@ -62,12 +64,15 @@ func (s *Service) AdminGetUser(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/user/{id} [put]
 func (s *Service) AdminUpdateUser(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is requried"))
+	}
 	uid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	input := make(map[string]interface{})
@@ -81,7 +86,7 @@ func (s *Service) AdminUpdateUser(c echo.Context) error {
 	err = s.DB().UpdateUser(tx, logon, uid, input)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -104,7 +109,7 @@ func (s *Service) AdminUpdateUser(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/user [post]
 func (s *Service) AdminCreateAccount(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	input := make(map[string]interface{})
 	//decode
@@ -127,14 +132,14 @@ func (s *Service) AdminCreateAccount(c echo.Context) error {
 	account, err := s.DB().CreateAccount(tx, logon, input)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 
 	//Create a confirm code
 	confirm, err := s.DB().CreateConfirmCode(tx, account)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 
 	//send mail
@@ -144,7 +149,7 @@ func (s *Service) AdminCreateAccount(c echo.Context) error {
 	err = s.DB().UpdateUser(tx, logon, account.ID, input)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 
 	conf := config.Load()
@@ -160,18 +165,18 @@ func (s *Service) AdminCreateAccount(c echo.Context) error {
 	mt, err := s.DB().GetMailTemplate(tx, 0, "mailconfirm")
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	msend := mail.New()
 	body, err := msend.Render(mt.MailID, mt.Body, val)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	err = msend.Send(email, email, mt.Subject, body)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -194,12 +199,15 @@ func (s *Service) AdminCreateAccount(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/user/{id} [delete]]
 func (s *Service) AdminDeleteAcount(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is required"))
+	}
 	uid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	tx := s.DB().Begin()
@@ -208,13 +216,13 @@ func (s *Service) AdminDeleteAcount(c echo.Context) error {
 	err = s.DB().DeleteUser(tx, uid)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	//2. delete account
 	err = s.DB().DeleteAccount(tx, logon, uid)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -238,19 +246,20 @@ func (s *Service) AdminDeleteAcount(c echo.Context) error {
 // @Router /admin/user/{id}/account [get]
 func (s *Service) AdminGetAccount(c echo.Context) error {
 	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is required"))
+	}
 	uid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	user, err := s.DB().GetAccountByID(nil, uid)
 	if err != nil {
-		resp := Response{
-			Code:  http.StatusNotFound,
-			Error: err.Error(),
+		if err == gorm.ErrRecordNotFound {
+			return NotFound(err)
 		}
-
-		return c.JSON(http.StatusNotFound, resp)
+		return InternalServerError(err)
 	}
 	user.PasswordHash = ""
 
@@ -274,7 +283,7 @@ func (s *Service) AdminGetAccount(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/tenant [post]
 func (s *Service) AdminCreateTenant(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	input := make(map[string]interface{})
 	//decode
@@ -284,7 +293,7 @@ func (s *Service) AdminCreateTenant(c echo.Context) error {
 
 	//input check
 	if _, ok := input["name"]; !ok {
-		return c.JSON(http.StatusBadRequest, BadRequest(errors.New("Name is required")))
+		return BadRequest(errors.New("Name is required"))
 	}
 
 	tx := s.DB().Begin()
@@ -293,7 +302,7 @@ func (s *Service) AdminCreateTenant(c echo.Context) error {
 	tenant, err := s.DB().CreateTenant(tx, logon, input)
 	if err != nil {
 		tx.Rollback()
-		return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -318,21 +327,24 @@ func (s *Service) AdminCreateTenant(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/tenant [get]
 func (s *Service) AdminGetTenant(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	sid := c.QueryParam("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is required"))
+	}
 	name := c.QueryParam("name")
 	name, _ = url.QueryUnescape(name)
 
 	tid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	//update
 	tenant, err := s.DB().GetTenant(nil, logon, tid, name)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		return InternalServerError(err)
 	}
 
 	resp := Response{
@@ -356,11 +368,15 @@ func (s *Service) AdminGetTenant(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/tenant/{id} [put]
 func (s *Service) AdminUpdateTenant(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
+
 	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is required"))
+	}
 	tid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	input := make(map[string]interface{})
@@ -371,7 +387,7 @@ func (s *Service) AdminUpdateTenant(c echo.Context) error {
 
 	//input check
 	if _, ok := input["name"]; !ok {
-		return c.JSON(http.StatusBadRequest, BadRequest(errors.New("Name is required")))
+		return BadRequest(errors.New("Name is required"))
 	}
 
 	tx := s.DB().Begin()
@@ -379,7 +395,7 @@ func (s *Service) AdminUpdateTenant(c echo.Context) error {
 	err = s.DB().UpdateTenant(tx, logon, tid, input)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -402,11 +418,15 @@ func (s *Service) AdminUpdateTenant(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/tenant/{id} [delete]]
 func (s *Service) AdminDeleteTenant(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
+
 	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is required"))
+	}
 	tid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	tx := s.DB().Begin()
@@ -415,7 +435,7 @@ func (s *Service) AdminDeleteTenant(c echo.Context) error {
 	err = s.DB().DeleteTenant(tx, logon, tid)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 

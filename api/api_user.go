@@ -19,18 +19,14 @@ import (
 // @Security ApiKeyAuth
 // @Router /user [get]
 func (s *Service) GetUser(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	user, err := s.DB().GetUser(nil, logon.ID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			resp := Response{
-				Code:  http.StatusNotFound,
-				Error: err.Error(),
-			}
-			return c.JSON(http.StatusNotFound, resp)
+			return NotFound(err)
 		}
-		return err
+		return InternalServerError(err)
 	}
 
 	resp := Response{
@@ -53,7 +49,7 @@ func (s *Service) GetUser(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /user/account [get]
 func (s *Service) GetAccount(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	account, err := s.DB().GetAccount(nil, logon.Email)
 	if err != nil {
@@ -81,7 +77,7 @@ func (s *Service) GetAccount(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /user [put]
 func (s *Service) UpdateUser(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	input := make(map[string]interface{})
 	//decode
@@ -94,7 +90,7 @@ func (s *Service) UpdateUser(c echo.Context) error {
 	err := s.DB().UpdateUser(tx, logon, logon.ID, input)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -117,7 +113,7 @@ func (s *Service) UpdateUser(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /user/password [put]
 func (s *Service) UpdatePassword(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	pwd := Password{}
 	//decode
@@ -133,12 +129,15 @@ func (s *Service) UpdatePassword(c echo.Context) error {
 	err := s.DB().UpdatePassword(tx, logon, newHash, pwd.UpdateDate)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
 	//clear cache
-	s.CacheDel(logon.Email)
+	key := "ACCN_" + logon.Email
+	err = s.CacheDel(key)
+	if err != nil {
+	}
 
 	resp := Response{
 		Code: http.StatusOK,

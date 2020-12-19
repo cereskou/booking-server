@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
@@ -38,10 +39,10 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 	client := resty.New()
 	resp, err := client.R().Get(conf.Holidays.URL)
 	if err != nil {
-		return err
+		return InternalServerError(err)
 	}
 	if resp.StatusCode() != http.StatusOK {
-		return err
+		return InternalServerError(err)
 	}
 
 	//Encode convert
@@ -49,7 +50,7 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 	r := transform.NewReader(b, japanese.ShiftJIS.NewDecoder())
 	body, err := ioutil.ReadAll(r)
 	if err != nil {
-		return err
+		return InternalServerError(err)
 	}
 
 	//JST
@@ -107,7 +108,7 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 			err := s.DB().HolidaysInsert(tx, recs)
 			if err != nil {
 				eoc = true
-				return err
+				return InternalServerError(err)
 			}
 			recs = recs[:0]
 		}
@@ -117,7 +118,7 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 		err := s.DB().HolidaysInsert(tx, recs)
 		if err != nil {
 			eoc = true
-			return err
+			return InternalServerError(err)
 		}
 		recs = recs[:0]
 	}
@@ -150,12 +151,10 @@ func (s *Service) ListHolidays(c echo.Context) error {
 	if err != nil {
 		holidays, err = s.DB().HolidaysSelect(nil, year)
 		if err != nil {
-			resp := Response{
-				Code:  http.StatusNotFound,
-				Error: err.Error(),
+			if err == gorm.ErrRecordNotFound {
+				return NotFound(err)
 			}
-
-			return c.JSON(http.StatusNotFound, resp)
+			return InternalServerError(err)
 		}
 		err = s.CacheSet(key, holidays)
 		if err != nil {

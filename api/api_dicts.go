@@ -23,13 +23,21 @@ import (
 // @Security ApiKeyAuth
 // @Router /dict [get]
 func (s *Service) GetDict(c echo.Context) error {
-	dictid, err := strconv.ParseInt(c.QueryParam("dictid"), 10, 64)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	sdid := c.QueryParam("dictid")
+	if sdid == "" {
+		return BadRequest(errors.New("Dict id is required"))
 	}
-	code, err := strconv.ParseInt(c.QueryParam("code"), 10, 64)
+	dictid, err := strconv.ParseInt(sdid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
+	}
+	scode := c.QueryParam("code")
+	if scode == "" {
+		return BadRequest(errors.New("Code is required"))
+	}
+	code, err := strconv.ParseInt(scode, 10, 64)
+	if err != nil {
+		return BadRequest(err)
 	}
 
 	resp := Response{
@@ -39,9 +47,9 @@ func (s *Service) GetDict(c echo.Context) error {
 		dicts, err := s.DB().GetAllDicts(nil)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
-				return c.JSON(http.StatusNotFound, NotFound(err))
+				return NotFound(err)
 			}
-			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+			return InternalServerError(err)
 		}
 		resp.Data = dicts
 	} else {
@@ -49,18 +57,18 @@ func (s *Service) GetDict(c echo.Context) error {
 			dict, err := s.DB().GetDict(nil, dictid, code)
 			if err != nil {
 				if err == gorm.ErrRecordNotFound {
-					return c.JSON(http.StatusNotFound, NotFound(err))
+					return NotFound(err)
 				}
-				return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+				return InternalServerError(err)
 			}
 			resp.Data = dict
 		} else {
 			dicts, err := s.DB().GetDicts(nil, dictid)
 			if err != nil {
 				if err == gorm.ErrRecordNotFound {
-					return c.JSON(http.StatusNotFound, NotFound(err))
+					return NotFound(err)
 				}
-				return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+				return InternalServerError(err)
 			}
 			resp.Data = dicts
 		}
@@ -81,7 +89,7 @@ func (s *Service) GetDict(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /dict [post]
 func (s *Service) AddDict(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	data := Dict{}
 	//decode
@@ -90,14 +98,13 @@ func (s *Service) AddDict(c echo.Context) error {
 	}
 
 	if data.Code <= 0 {
-		return c.JSON(http.StatusBadRequest, BadRequest(errors.New("Code is 1-based integer")))
+		return BadRequest(errors.New("Code is 1-based integer"))
 	}
 
 	tx := s.DB().Begin()
 
 	//update password
 	rec := models.Dict{
-		TenantID:   logon.Tenant,
 		DictID:     int(data.DictID),
 		Code:       int(data.Code),
 		Kvalue:     data.Value,
@@ -105,10 +112,10 @@ func (s *Service) AddDict(c echo.Context) error {
 		Status:     data.Status,
 		UpdateUser: logon.ID,
 	}
-	err := s.DB().AddDict(tx, &rec)
+	err := s.DB().AddDict(tx, logon, &rec)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -131,7 +138,7 @@ func (s *Service) AddDict(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /dict/array [post]
 func (s *Service) AddDicts(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	data := Dicts{}
 	//decode
@@ -157,7 +164,7 @@ func (s *Service) AddDicts(c echo.Context) error {
 	err := s.DB().AddDicts(tx, values)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -182,19 +189,31 @@ func (s *Service) AddDicts(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /dict/{dictid}/enabled [put]
 func (s *Service) EnableDict(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
-	dictid, err := strconv.ParseInt(c.Param("dictid"), 10, 64)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	sdid := c.Param("dictid")
+	if sdid == "" {
+		return BadRequest(errors.New("Dict id is required"))
 	}
-	code, err := strconv.ParseInt(c.QueryParam("code"), 10, 64)
+	dictid, err := strconv.ParseInt(sdid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
-	status, err := strconv.ParseInt(c.QueryParam("status"), 10, 64)
+	scode := c.QueryParam("code")
+	if scode == "" {
+		return BadRequest(errors.New("Code is required"))
+	}
+	code, err := strconv.ParseInt(scode, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
+	}
+	sst := c.QueryParam("status")
+	if sst == "" {
+		return BadRequest(errors.New("Status is required"))
+	}
+	status, err := strconv.ParseInt(sst, 10, 64)
+	if err != nil {
+		return BadRequest(err)
 	}
 
 	tx := s.DB().Begin()
@@ -203,13 +222,13 @@ func (s *Service) EnableDict(c echo.Context) error {
 		err = s.DB().EnableDict(tx, logon, dictid, code, int(status))
 		if err != nil {
 			tx.Rollback()
-			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+			return InternalServerError(err)
 		}
 	} else {
 		err = s.DB().EnableDicts(tx, logon, dictid, int(status))
 		if err != nil {
 			tx.Rollback()
-			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+			return InternalServerError(err)
 		}
 	}
 
@@ -234,11 +253,15 @@ func (s *Service) EnableDict(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /dict/{dictid} [put]
 func (s *Service) UpdateDict(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
-	dictid, err := strconv.ParseInt(c.Param("dictid"), 10, 64)
+	sdid := c.Param("dictid")
+	if sdid == "" {
+		return BadRequest(errors.New("Dict id is required"))
+	}
+	dictid, err := strconv.ParseInt(sdid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 
 	data := Dict{}
@@ -248,7 +271,7 @@ func (s *Service) UpdateDict(c echo.Context) error {
 	}
 
 	if data.Code <= 0 {
-		return c.JSON(http.StatusBadRequest, BadRequest(errors.New("Code is 1-based integer")))
+		return BadRequest(errors.New("Code is 1-based integer"))
 	}
 
 	tx := s.DB().Begin()
@@ -266,7 +289,7 @@ func (s *Service) UpdateDict(c echo.Context) error {
 	err = s.DB().UpdateDict(tx, logon, &rec)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
@@ -305,15 +328,23 @@ func (s *Service) UpdateDicts(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /dict [delete]
 func (s *Service) DeleteDict(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
-	dictid, err := strconv.ParseInt(c.QueryParam("dictid"), 10, 64)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+	sdid := c.QueryParam("dictid")
+	if sdid == "" {
+		return BadRequest(errors.New("Dict id is required"))
 	}
-	code, err := strconv.ParseInt(c.QueryParam("code"), 10, 64)
+	dictid, err := strconv.ParseInt(sdid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
+	}
+	scode := c.QueryParam("code")
+	if scode == "" {
+		return BadRequest(errors.New("Code is required"))
+	}
+	code, err := strconv.ParseInt(scode, 10, 64)
+	if err != nil {
+		return BadRequest(err)
 	}
 
 	tx := s.DB().Begin()
@@ -322,13 +353,13 @@ func (s *Service) DeleteDict(c echo.Context) error {
 		err = s.DB().DeleteDict(tx, logon, dictid, code)
 		if err != nil {
 			tx.Rollback()
-			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+			return InternalServerError(err)
 		}
 	} else {
 		err = s.DB().DeleteDicts(tx, logon, dictid)
 		if err != nil {
 			tx.Rollback()
-			return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+			return InternalServerError(err)
 		}
 	}
 

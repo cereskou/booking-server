@@ -1,12 +1,17 @@
 package api
 
 import (
+	"ditto/booking/config"
+	"ditto/booking/mail"
 	"ditto/booking/models"
+	"ditto/booking/utils"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 // CreateTenant - テナントの仮作成
@@ -21,7 +26,7 @@ import (
 // @Security ApiKeyAuth
 // @Router /tenant [post]]
 func (s *Service) CreateTenant(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	input := make(map[string]interface{})
 	//decode
@@ -30,8 +35,18 @@ func (s *Service) CreateTenant(c echo.Context) error {
 	}
 
 	//input check
+	//name
 	if _, ok := input["name"]; !ok {
-		return c.JSON(http.StatusBadRequest, BadRequest(errors.New("Tenant name is required")))
+		return BadRequest(errors.New("Tenant name is required"))
+	}
+	active := 0
+	//active
+	if val, ok := input["active"]; !ok {
+		active = 0
+	} else {
+		if val.(bool) {
+			active = 1
+		}
 	}
 
 	tx := s.DB().Begin()
@@ -39,7 +54,16 @@ func (s *Service) CreateTenant(c echo.Context) error {
 	tenant, err := s.DB().CreateTenant(tx, logon, input)
 	if err != nil {
 		tx.Rollback()
-		return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		return InternalServerError(err)
+	}
+
+	//tenant id
+	logon.Tenant = tenant.ID
+	key := "ACCN_TENANT_" + logon.Email
+	err = s.CacheSet(key, tenant.ID)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
 	}
 
 	//add logon user to tenant/ need re-login
@@ -47,19 +71,16 @@ func (s *Service) CreateTenant(c echo.Context) error {
 	users = append(users, &models.TenantUsers{
 		TenantID:   tenant.ID,
 		UserID:     logon.ID,
-		Right:      1,
+		Right:      active,
 		UpdateUser: logon.ID,
 	})
 	err = s.DB().AddUserToTenant(tx, logon, users)
 	if err != nil {
 		tx.Rollback()
-		return c.JSON(http.StatusInternalServerError, InternalServerError(err))
+		return InternalServerError(err)
 	}
-
-	//clear cache
-	s.CacheDel(logon.Email)
-
 	tx.Commit()
+
 	resp := Response{
 		Code: http.StatusOK,
 		Data: tenant,
@@ -80,21 +101,30 @@ func (s *Service) CreateTenant(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /user/tenants/{id} [put]
 func (s *Service) ChangeUserTenant(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("Id is required"))
+	}
 	tid, err := strconv.ParseInt(sid, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, BadRequest(err))
+		return BadRequest(err)
 	}
 	tx := s.DB().Begin()
 
 	err = s.DB().ChangeUserTenant(tx, logon, tid)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return InternalServerError(err)
 	}
 	tx.Commit()
+
+	//clear
+	key := "ACCN_TENANT_" + logon.Email
+	err = s.CacheSet(key, tid)
+	if err != nil {
+	}
 
 	resp := Response{
 		Code: http.StatusOK,
@@ -114,12 +144,19 @@ func (s *Service) ChangeUserTenant(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /user/tenants [get]
 func (s *Service) GetTenants(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
 	tenants, err := s.DB().GetUserTenants(nil, logon, logon.ID)
 	if err != nil {
-		return err
+		if err == gorm.ErrRecordNotFound {
+			return NotFound(err)
+		}
+		return InternalServerError(err)
 	}
+	if len(tenants) == 0 {
+		return NotFound(errors.New("No content"))
+	}
+
 	resp := Response{
 		Code: http.StatusOK,
 		Data: tenants,
@@ -139,16 +176,202 @@ func (s *Service) GetTenants(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /tenant/users [get]
 func (s *Service) TenantListUser(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
-	users, err := s.DB().GetTenantUsesr(nil, logon, logon.Tenant)
+	if logon.Tenant == 0 {
+		return NoContent(errors.New("No tenant"))
+	}
+
+	users, err := s.DB().GetTenantUser(nil, logon, logon.Tenant)
 	if err != nil {
+		return InternalServerError(err)
+	}
+	if len(users) == 0 {
+		return NotFound(errors.New("No content"))
+	}
+	resp := Response{
+		Code: http.StatusOK,
+		Data: users,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// TenantCreateUser - ユーザー作成
+// @Summary ユーザーを作成します（テナント）
+// @Tags Tenant
+// @Accept json
+// @Produce json
+// @Param data body Empty true "data"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /tenant/user [post]
+func (s *Service) TenantCreateUser(c echo.Context) error {
+	logon := s.logonFromToken(c)
+
+	if logon.Tenant == 0 {
+		return NoContent(errors.New("No tenant"))
+	}
+
+	input := make(map[string]interface{})
+	//decode
+	if err := c.Bind(&input); err != nil {
 		return err
+	}
+
+	conf := config.Load()
+
+	//input check
+	if _, ok := input["email"]; !ok {
+		return BadRequest(errors.New("Email is required"))
+	}
+	//password
+	if _, ok := input["password"]; !ok {
+		pass := utils.GeneratePassowrd(8, false)
+		input["password"] = pass
+	}
+	password := input["password"].(string)
+
+	tx := s.DB().Begin()
+	account, err := s.DB().TenantCreateUser(tx, logon, input)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	//user details
+	err = s.DB().UpdateUser(tx, logon, account.ID, input)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	//tentans_users
+	tenant, err := s.DB().GetTenant(tx, logon, logon.Tenant, "")
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	role := conf.DefaultRole()
+	err = s.DB().AddUserRole(tx, logon, account.ID, []int64{role.ID})
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	//Create a confirm code
+	confirm, err := s.DB().CreateConfirmCode(tx, account)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	email := account.Email
+	url := fmt.Sprintf(conf.Confirm.URL, email, confirm.ConfirmCode)
+	val := map[string]interface{}{
+		"LessonName": tenant.Name,
+		"Email":      email,
+		"Expire":     conf.Confirm.Expires,
+		"ConfirmURL": url,
+		"Password":   password,
+	}
+	mt, err := s.DB().GetMailTemplate(tx, 0, "mailconfirm")
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+	msend := mail.New()
+	body, err := msend.Render(mt.MailID, mt.Body, val)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+	err = msend.Send(email, email, mt.Subject, body)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+	tx.Commit()
+
+	//clear password
+	account.PasswordHash = ""
+
+	resp := Response{
+		Code: http.StatusOK,
+		Data: account,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// TenantDeleteUser - ユーザー削除
+// @Summary ユーザーを削除します（テナント）
+// @Tags Tenant
+// @Accept json
+// @Produce json
+// @Param id path int true "user id"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /tenant/user/{id} [delete]
+func (s *Service) TenantDeleteUser(c echo.Context) error {
+	logon := s.logonFromToken(c)
+
+	//user id
+	sid := c.Param("id")
+	if sid == "" {
+		return BadRequest(errors.New("User id is required"))
+	}
+	uid, err := strconv.ParseInt(sid, 10, 64)
+	if err != nil {
+		return BadRequest(err)
+	}
+
+	tx := s.DB().Begin()
+
+	//1. role
+	err = s.DB().DeleteUserRole(tx, logon, logon.Tenant, []int64{uid})
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	//2. tenant_users
+	err = s.DB().RemoveUserFromTenant(tx, logon, logon.Tenant, []int64{uid})
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	//3. user delete
+	err = s.DB().DeleteUser(tx, uid)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+
+	//4. delete account
+	err = s.DB().DeleteAccount(tx, logon, uid)
+	if err != nil {
+		tx.Rollback()
+		return InternalServerError(err)
+	}
+	tx.Commit()
+
+	//自分を削除すること
+	if uid == logon.ID {
+		key := "ACCN_TENANT_" + logon.Email
+		err = s.CacheDel(key)
+		if err != nil {
+		}
 	}
 
 	resp := Response{
 		Code: http.StatusOK,
-		Data: users,
 	}
 
 	return c.JSON(http.StatusOK, resp)

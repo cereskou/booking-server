@@ -28,11 +28,17 @@ import (
 // @Security ApiKeyAuth
 // @Router /user/logout [get]
 func (s *Service) Logout(c echo.Context) error {
-	logon := logonFromToken(c)
+	logon := s.logonFromToken(c)
 
-	err := s.CacheDel(logon.Email)
+	key := "ACCN_" + logon.Email
+	err := s.CacheDel(key)
 	if err != nil {
-		return err
+		return InternalServerError(err)
+	}
+	key = "ACCN_TENANT_" + logon.Email
+	err = s.CacheDel(key)
+	if err != nil {
+		return InternalServerError(err)
 	}
 
 	resp := Response{
@@ -72,7 +78,7 @@ func (s *Service) Login(c echo.Context) error {
 		}
 		//confirmed
 		if u.EmailConfirmed == 0 {
-			return c.JSON(http.StatusBadRequest, BadRequest(errors.New("account not confirmed")))
+			return BadRequest(errors.New("account not confirmed"))
 		}
 		//compare password
 		if !utils.CompareHashedPassword(u.PasswordHash, login.Password) {
@@ -81,11 +87,22 @@ func (s *Service) Login(c echo.Context) error {
 
 		err = copier.Copy(&user, u)
 		if err != nil {
-			return err
+			return InternalServerError(err)
 		}
 
-		err = s.CacheSet(login.Email, user)
+		key := "ACCN_" + login.Email
+		err = s.CacheSet(key, user)
 		if err != nil {
+		}
+		//set tenat
+		tenant, err := s.DB().GetUserTenant(nil, u.ID)
+		if err != nil {
+			//
+		} else {
+			key = "ACCN_TENANT_" + login.Email
+			err = s.CacheSet(key, tenant)
+			if err != nil {
+			}
 		}
 	} else {
 		//compare password
@@ -97,16 +114,14 @@ func (s *Service) Login(c echo.Context) error {
 
 	//payload
 	d := cx.Payload{
-		ID:     user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
-		Role:   user.Role,
-		Tenant: user.TenantID,
+		ID:    user.ID,
+		Email: user.Email,
+		Role:  user.Role,
 	}
 	//create a token
 	token, err := s.generateToken(&d)
 	if err != nil {
-		return err
+		return InternalServerError(err)
 	}
 	resp := Response{
 		Code: http.StatusOK,
@@ -154,13 +169,13 @@ func (s *Service) RefreshToken(c echo.Context) error {
 		var d cx.Payload
 		err := utils.JSON.NewDecoder(strings.NewReader(payload)).Decode(&d)
 		if err != nil {
-			return err
+			return InternalServerError(err)
 		}
 
 		//create a token
 		token, err := s.generateToken(&d)
 		if err != nil {
-			return err
+			return InternalServerError(err)
 		}
 		resp := Response{
 			Code: http.StatusOK,
@@ -198,7 +213,7 @@ func (s *Service) ConfirmEmail(c echo.Context) error {
 	err := s.DB().ConfirmAccountWithCode(tx, email, code, expires)
 	if err != nil {
 		tx.Rollback()
-		return c.JSON(http.StatusNotFound, NewResponse(http.StatusNotFound, err.Error()))
+		return InternalServerError(err)
 	}
 	tx.Commit()
 
