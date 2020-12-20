@@ -24,7 +24,7 @@ import (
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /class [post]]
+// @Router /class [post]
 func (s *Service) CreateClass(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
