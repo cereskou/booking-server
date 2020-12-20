@@ -12,7 +12,7 @@ Facility
 - POST /facility 施設を作成
 - PUT /facility/{id} 施設情報を更新します
 - DELETE /facility/{id} 施設を削除します 
-- PUT /facility/{id}/status 施設の利用可否（有効・無効）
+- PUT /facility/{id}/{status} 施設の利用可否（有効・無効）
   
 Tenant
 - GET /tenant/facilities 施設情報を取得（複数）を取得します
