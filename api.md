@@ -11,7 +11,7 @@
 | | /user/login | POST | ログイン |
 | | /user/logout | GET | ログアウト |
 | | /user/password | PUT | パスワードを変更します |
-| | /user/refresh | リフレッシュトークン<br>新しいアクセストークンを発行します |
+| | /user/refresh | POST | リフレッシュトークン<br>新しいアクセストークンを発行します |
 | | /user/tenants | GET | ユーザーの所属テナント一覧を取得します |
 | | /user/tenants/{id} | PUT | ユーザーの所属テナントをアクティブします<br>複数テナントに所属の場合、アクティブのテナントが１つしかありません。 |
 
