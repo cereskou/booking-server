@@ -147,7 +147,7 @@ func (s *Service) AddDicts(c echo.Context) error {
 	}
 
 	values := make([]*models.Dict, 0)
-	for _, v := range data.DictList {
+	for _, v := range data.List {
 		values = append(values, &models.Dict{
 			TenantID:   logon.Tenant,
 			DictID:     int(v.DictID),

@@ -66,5 +66,16 @@ type Dict struct {
 
 //Dicts -
 type Dicts struct {
-	DictList []*Dict `json:"dicts"`
+	List []*Dict `json:"dicts"`
+}
+
+//DivideUser - divide exist user into tenants
+type DivideUser struct {
+	Divides int   `json:"divides"` //0: remove 1: add
+	UserID  int64 `json:"user_id"`
+}
+
+//DivideUsers -
+type DivideUsers struct {
+	List []*DivideUser `json:"users"`
 }

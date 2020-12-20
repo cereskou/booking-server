@@ -155,12 +155,14 @@ func (s *Service) AdminCreateAccount(c echo.Context) error {
 	conf := config.Load()
 
 	email := account.Email
-	url := fmt.Sprintf(conf.Confirm.URL, email, confirm.ConfirmCode)
+	confirmurl := fmt.Sprintf(conf.Confirm.URL, email, confirm.ConfirmCode)
+	confirmurl = url.QueryEscape(confirmurl)
+
 	val := map[string]interface{}{
 		"LessonName": "Lesson",
 		"Email":      email,
 		"Expire":     conf.Confirm.Expires,
-		"ConfirmURL": url,
+		"ConfirmURL": confirmurl,
 	}
 	mt, err := s.DB().GetMailTemplate(tx, 0, "mailconfirm")
 	if err != nil {
