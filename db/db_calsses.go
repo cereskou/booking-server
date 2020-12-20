@@ -88,7 +88,7 @@ func (d *Database) UpdateClass(db *gorm.DB, logon *cx.Payload, cid int64, data m
 		}
 	}
 
-	if len(data) > 1 {
+	if len(data) > 0 {
 		//get values
 		values := make([]string, 0)
 		for k, v := range data {

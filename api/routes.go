@@ -88,6 +88,9 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	//add/remove exist user to tenant
 	t.PUT("/user", s.TenantDividedUser)
 	t.DELETE("/user/:id", s.TenantDeleteUser)
+	// tenant/facility
+	t.GET("/facilities", s.GetFacilities)
+	t.GET("/facility/:id", s.GetFacility)
 
 	//Class -
 	c := g.Group("/class")
@@ -98,6 +101,15 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	c.POST("", s.CreateClass)
 	c.POST("/user/:id", s.ClassCreateUser)
 	c.PUT("/user/:id", s.ClassDividedUser)
+
+	//facility -
+	f := g.Group("/facility")
+	f.Use(middleware.JWTWithConfig(config))
+	f.Use(casbinmw.Middleware(s._enforcer))
+	f.POST("", s.CreateFacility)
+	f.PUT("/:id", s.UpdateFacility)
+	f.DELETE("/:id", s.DeleteFacility)
+	f.PUT("/:id/:status", s.EnabledFacility)
 }
 
 //traceID -
