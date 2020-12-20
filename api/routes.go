@@ -41,6 +41,8 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	//get tenants
 	u.GET("/tenants", s.GetTenants)
 	u.PUT("/tenants/:id", s.ChangeUserTenant)
+	//get classes
+	u.GET("/classes", s.GetClasses)
 
 	//Holiday
 	g.GET("/holidays/:year", s.ListHolidays)
@@ -74,15 +76,28 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	d.PUT("/:dictid/enabled", s.EnableDict)
 	d.DELETE("", s.DeleteDict)
 
-	//Tenant
+	//Tenant -
 	t := g.Group("/tenant")
 	t.Use(middleware.JWTWithConfig(config))
 	t.Use(casbinmw.Middleware(s._enforcer))
 	t.GET("/users", s.TenantListUser)
+	t.GET("/users/detail", s.TenantListUserWithDetail)
 	t.POST("", s.CreateTenant)
 	//create a user
 	t.POST("/user", s.TenantCreateUser)
+	//add/remove exist user to tenant
+	t.PUT("/user", s.TenantDividedUser)
 	t.DELETE("/user/:id", s.TenantDeleteUser)
+
+	//Class -
+	c := g.Group("/class")
+	c.Use(middleware.JWTWithConfig(config))
+	c.Use(casbinmw.Middleware(s._enforcer))
+	c.GET("/users/:id", s.ClassListUser)
+	c.GET("/users/:id/detail", s.ClassListUserWithDetail)
+	c.POST("", s.CreateClass)
+	c.POST("/user/:id", s.ClassCreateUser)
+	c.PUT("/user/:id", s.ClassDividedUser)
 }
 
 //traceID -
