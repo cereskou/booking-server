@@ -10,6 +10,7 @@ type Account struct {
 	Email             string    `json:"email" gorm:"column:email"`                             //Email
 	EmailConfirmed    int       `json:"email_confirmed" gorm:"column:email_confirmed"`         //Email Confirmed
 	PasswordHash      string    `json:"password_hash,omitempty" gorm:"column:password_hash"`   // password hash
+	TemporaryPassword string    `json:"temporary_passowrd,omiempty" gorm:"-"`                  //一時パスワード
 	LockoutEnd        time.Time `json:"lockout_end" gorm:"column:lockout_end"`                 //
 	LockoutEnabled    int       `json:"lockout_enabled" gorm:"column:lockout_enabled"`         //
 	AccessFailedCount int64     `json:"access_failed_count" gorm:"column:access_failed_count"` //
