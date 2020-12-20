@@ -8,8 +8,20 @@
 ### 2020/12/20
   
 **実装済み**
+
+Class  
+- POST /class クラス作成
+- PUT /class/user/{id} テナントに追加・削除
+- POST /class/user/{id} ユーザーを作成します
+- GET /class/users/{id} 指定クラスのユーザー一覧を取得
+- GET /class/users/{id}/detail 指定クラスのユーザー一覧（詳細）を取得
+
+User 
+- GET /user/classes ユーザーのクラス一覧を取得します
+- PUT /user/class/{id} ユーザークラスの切り替え
   
-エラー時の戻り値やり直し
+  
+エラー時の戻り値やり直し、統一しました。
 
 ```
 //Response -
@@ -23,6 +35,8 @@ type Response struct {
 Tenant
 - POST /tenant/user ユーザーを作成します（テナント）
 - DELETE /tenant/user/{id} ユーザーを削除します（テナント）
+- GET /tenant/users ユーザー一覧を取得します（ログイン中）
+- GET /tenant/users/detail /tenant/users/detail
 
 ---
 ### 2020/12/18
