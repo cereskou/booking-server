@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
@@ -165,6 +166,38 @@ func (s *Service) GetTenants(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// TenantListUserWithDetail - ユーザー一覧取得(詳細)
+// @Summary ユーザー一覧（詳細）を取得します
+// @Tags Tenant
+// @Accept json
+// @Produce json
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /tenant/users/detail [get]
+func (s *Service) TenantListUserWithDetail(c echo.Context) error {
+	logon := s.logonFromToken(c)
+
+	if logon.Tenant == 0 {
+		return NoContent(errors.New("No tenant"))
+	}
+
+	users, err := s.DB().GetTenantUserWithDetail(nil, logon, logon.Tenant)
+	if err != nil {
+		return InternalServerError(err)
+	}
+	if len(users) == 0 {
+		return NotFound(errors.New("No content"))
+	}
+	resp := Response{
+		Code: http.StatusOK,
+		Data: users,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
 // TenantListUser - ユーザー一覧取得
 // @Summary ユーザー一覧を取得します（ログイン中）
 // @Tags Tenant
@@ -270,12 +303,13 @@ func (s *Service) TenantCreateUser(c echo.Context) error {
 	}
 
 	email := account.Email
-	url := fmt.Sprintf(conf.Confirm.URL, email, confirm.ConfirmCode)
+	confirmurl := fmt.Sprintf(conf.Confirm.URL, email, confirm.ConfirmCode)
+	confirmurl = url.QueryEscape(confirmurl)
 	val := map[string]interface{}{
 		"LessonName": tenant.Name,
 		"Email":      email,
 		"Expire":     conf.Confirm.Expires,
-		"ConfirmURL": url,
+		"ConfirmURL": confirmurl,
 		"Password":   password,
 	}
 	mt, err := s.DB().GetMailTemplate(tx, 0, "mailconfirm")
@@ -369,6 +403,67 @@ func (s *Service) TenantDeleteUser(c echo.Context) error {
 		if err != nil {
 		}
 	}
+
+	resp := Response{
+		Code: http.StatusOK,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// TenantDividedUser - ユーザーの所属
+// @Summary ユーザーとテナントの所属を変更します（テナント）
+// @Tags Tenant
+// @Accept json
+// @Produce json
+// @Param users body DivideUsers true "user list"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /tenant/user [put]
+func (s *Service) TenantDividedUser(c echo.Context) error {
+	logon := s.logonFromToken(c)
+
+	//テナント
+	if logon.Tenant == 0 {
+		return BadRequest(errors.New("Logon user hasn't a valid tenant"))
+	}
+
+	data := DivideUsers{}
+	//decode
+	if err := c.Bind(&data); err != nil {
+		return err
+	}
+
+	au := make([]int64, 0) //add
+	ru := make([]int64, 0) //remove
+	//add
+	for _, u := range data.List {
+		if u.Divides == 0 {
+			ru = append(ru, u.UserID)
+		} else if u.Divides == 1 {
+			au = append(au, u.UserID)
+		}
+	}
+	tx := s.DB().Begin()
+	//remove
+	if len(ru) > 0 {
+		err := s.DB().RemoveUserFromTenant(tx, logon, logon.Tenant, ru)
+		if err != nil {
+			tx.Rollback()
+			return InternalServerError(err)
+		}
+	}
+	//add
+	if len(au) > 0 {
+		err := s.DB().DivideUserToTenant(tx, logon, logon.Tenant, au)
+		if err != nil {
+			tx.Rollback()
+			return InternalServerError(err)
+		}
+	}
+	tx.Commit()
 
 	resp := Response{
 		Code: http.StatusOK,

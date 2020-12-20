@@ -60,16 +60,15 @@ func (d *Database) UpdatePassword(db *gorm.DB, logon *cx.Payload, password strin
 }
 
 //GetUser -
-func (d *Database) GetUser(db *gorm.DB, id int64) (*models.User, error) {
+func (d *Database) GetUser(db *gorm.DB, id int64) (*models.UserWithDetail, error) {
 	db = d.ValidDB(db)
 
 	//select user detail as a json format ("key":"value","key":"value")
-	sql := "select a.id, a.email, d.detail from accounts a left join (select id, GROUP_CONCAT(CONCAT_WS(':', CONCAT('\"',`option_key`,'\"'), CONCAT('\"',`option_val`,'\"'))) as detail from users_detail d group by id) d on (a.id = d.id) where a.id=?"
-	var u struct {
-		ID     int64
-		Email  string
-		Detail string
-	}
+	sql := "select a.id as id,a.email as email,a.login_time as login_time,a.update_user as update_user,a.update_date as update_date,d.detail as detail from accounts a"
+	sql += " left join (select id, GROUP_CONCAT(CONCAT_WS(':', CONCAT('\"',`option_key`,'\"'), CONCAT('\"',`option_val`,'\"'))) as detail from users_detail d group by id) d on (a.id = d.id)"
+	sql += " where a.id=?"
+
+	var u models.UserWithDetail
 	result := db.Raw(sql, id).Scan(&u)
 	if result.Error != nil {
 		return nil, result.Error
@@ -79,17 +78,12 @@ func (d *Database) GetUser(db *gorm.DB, id int64) (*models.User, error) {
 	}
 
 	u.Detail = "{" + u.Detail + "}"
-	data := models.User{
-		ID:    u.ID,
-		Email: u.Email,
-	}
-	err := utils.JSON.NewDecoder(strings.NewReader(u.Detail)).Decode(&data)
+	err := utils.JSON.NewDecoder(strings.NewReader(u.Detail)).Decode(&u.Extra)
 	if err != nil {
 		return nil, err
 	}
-	data.Email = u.Email
 
-	return &data, nil
+	return &u, nil
 }
 
 //DeleteUser -

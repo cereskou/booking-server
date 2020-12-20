@@ -173,6 +173,43 @@ func (d *Database) RemoveUserFromTenant(db *gorm.DB, logon *cx.Payload, tid int6
 	return nil
 }
 
+//GetTenantUserWithDetail - 複数ユーザー取得
+func (d *Database) GetTenantUserWithDetail(db *gorm.DB, logon *cx.Payload, tid int64) ([]*models.UserWithDetail, error) {
+	db = d.ValidDB(db)
+
+	//select from accounts and users_detail
+	sql := "select t.id as id,t.email as email,t.login_time as login_time,t.update_user as update_user,t.update_date as update_date,d.detail as detail from accounts t"
+	sql += " left join (select id, GROUP_CONCAT(CONCAT_WS(':', CONCAT('\"',`option_key`,'\"'), CONCAT('\"',`option_val`,'\"'))) as detail from users_detail d group by id) d on (d.id=t.id)"
+	sql += " left join tenants_users u on (u.user_id=t.id)"
+	sql += " where u.tenant_id=?"
+
+	result := make([]*models.UserWithDetail, 0)
+	rows, err := db.Raw(sql, tid).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var record models.UserWithDetail
+		if err := db.ScanRows(rows, &record); err != nil {
+			break
+		}
+
+		record.Detail = "{" + record.Detail + "}"
+		err := utils.JSON.NewDecoder(strings.NewReader(record.Detail)).Decode(&record.Extra)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, &record)
+	}
+	if len(result) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return result, nil
+}
+
 //GetTenantUser -
 func (d *Database) GetTenantUser(db *gorm.DB, logon *cx.Payload, tid int64) ([]*models.TenantUsers, error) {
 	db = d.ValidDB(db)
@@ -285,4 +322,26 @@ func (d *Database) TenantCreateUser(db *gorm.DB, logon *cx.Payload, vmap map[str
 	}
 
 	return &data, nil
+}
+
+//DivideUserToTenant -
+func (d *Database) DivideUserToTenant(db *gorm.DB, logon *cx.Payload, tid int64, uids []int64) error {
+	db = d.ValidDB(db)
+
+	//
+	values := make([]string, 0)
+	for _, u := range uids {
+		val := fmt.Sprintf("(%v,%v,%v)", tid, u, logon.ID)
+
+		values = append(values, val)
+	}
+
+	//insert update
+	sql := "insert into tenants_users(`tenant_id`,`user_id`,`update_user`) values " + strings.Join(values, ",") + " on duplicate key update update_user=values(update_user)"
+	err := db.Exec(sql).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
