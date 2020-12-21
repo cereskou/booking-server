@@ -91,6 +91,9 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	// tenant/facility
 	t.GET("/facilities", s.GetFacilities)
 	t.GET("/facility/:id", s.GetFacility)
+	// tenant/menu
+	t.GET("/menus", s.GetMenus)
+	t.GET("/menu/:id", s.GetMenu)
 
 	//Class -
 	c := g.Group("/class")
@@ -110,6 +113,15 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	f.PUT("/:id", s.UpdateFacility)
 	f.DELETE("/:id", s.DeleteFacility)
 	f.PUT("/:id/:status", s.EnabledFacility)
+
+	//menu -
+	m := g.Group("/menu")
+	m.Use(middleware.JWTWithConfig(config))
+	m.Use(casbinmw.Middleware(s._enforcer))
+	m.POST("", s.CreateMenu)
+	m.PUT("/:id", s.UpdateMenu)
+	m.DELETE("/:id", s.DeleteMenu)
+	m.PUT("/:id/:status", s.EnabledMenu)
 }
 
 //traceID -
