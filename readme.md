@@ -8,6 +8,17 @@
   
 **実装済み**  
 
+Menu
+- POST /menu メニューを作成
+- PUT /menu/{id} メニュー情報を更新します
+- DELETE /menu/{id} メニューを削除します 
+- PUT /menu/{id}/{status} メニューの利用可否（有効・無効）
+
+Tenant
+- GET /tenant/menus メニュー情報を取得（複数）を取得します
+- GET /tenant/menu/{id} メニュー情報を取得します
+
+---
 Facility
 - POST /facility 施設を作成
 - PUT /facility/{id} 施設情報を更新します
@@ -16,7 +27,7 @@ Facility
   
 Tenant
 - GET /tenant/facilities 施設情報を取得（複数）を取得します
-- GET //tenant/facility/{id} 施設情報を取得します
+- GET /tenant/facility/{id} 施設情報を取得します
 
 ---
 ### 2020/12/20
@@ -223,5 +234,5 @@ cp -fp id_rsa private.pem
 generate go source code from mariadb table.
 
 ```
-db2struct --host localhost -d bookingdb -t holidays --package models --struct Holiday -p --user booking --gorm
+db2struct --host localhost -d bookingdb -t holidays --package models --struct Holiday -p --user booking --gorm --json
 ```
