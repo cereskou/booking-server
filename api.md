@@ -14,9 +14,16 @@
 | | /user/refresh | POST | リフレッシュトークン<br>新しいアクセストークンを発行します |
 | | /user/tenants | GET | ユーザーの所属テナント一覧を取得します |
 | | /user/tenants/{id} | PUT | ユーザーの所属テナントをアクティブします<br>複数テナントに所属の場合、アクティブのテナントが１つしかありません。 |
+| dict | /dict | GET | 辞書情報を取得します |
+| | /dict | POST | 辞書情報を新規作成します |
+| | /dict | DELETE | 辞書情報を削除します |
+| | /dict/array | PUT | 辞書情報を更新します（複数） |
+| | /dict/array | POST | 辞書情報を新規作成します（複数） |
+| | /dict/{dictid} | PUT | 辞書情報を更新します |
+| | /dict/{dictid}/enabled | PUT | 辞書情報を有効・無効します |
 
 
-  
+---
 - User  
 ![User](images/api_user.png)
 
