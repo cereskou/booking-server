@@ -118,6 +118,8 @@ func (s *Service) Login(c echo.Context) error {
 		Email: user.Email,
 		Role:  user.Role,
 	}
+	logger.Trace(d)
+
 	//create a token
 	token, err := s.generateToken(&d)
 	if err != nil {
