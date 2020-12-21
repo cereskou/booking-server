@@ -122,6 +122,18 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	m.PUT("/:id", s.UpdateMenu)
 	m.DELETE("/:id", s.DeleteMenu)
 	m.PUT("/:id/:status", s.EnabledMenu)
+
+	m.GET("/:id/schedules", s.GetSchedules)
+	m.GET("/schedule/:id", s.GetSchedule)
+
+	//schedule -
+	l := g.Group("/schedule")
+	l.Use(middleware.JWTWithConfig(config))
+	l.Use(casbinmw.Middleware(s._enforcer))
+	l.POST("", s.CreateSchedule)
+	l.DELETE("/:id", s.DeleteSchedule)
+	l.PUT("/:id/:status", s.EnabledSchedule)
+
 }
 
 //traceID -
