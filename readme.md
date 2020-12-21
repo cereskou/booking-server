@@ -8,7 +8,14 @@
   
 **実装済み**  
 
+Schedule  
+- POST /schedule スケジュールを作成します
+- DELETE /schedule/{id} スケジュールを削除します
+- PUT /schedule/{id}/{status} スケジュールの利用可否（有効・無効）
+  
 Menu
+- GET /menu/schedule/{id} スケジュール情報を取得します
+- GET /menu/{id}/schedules スケジュール情報（複数）を取得します
 - POST /menu メニューを作成
 - PUT /menu/{id} メニュー情報を更新します
 - DELETE /menu/{id} メニューを削除します 
