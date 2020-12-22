@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -71,17 +70,14 @@ func (s *Service) CreateClass(c echo.Context) error {
 func (s *Service) ChangeUserClass(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	tid, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "Class id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
+
 	tx := s.DB().Begin()
 
-	err = s.DB().ChangeUserClass(tx, logon, tid)
+	err = s.DB().ChangeUserClass(tx, logon, id)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -145,17 +141,13 @@ func (s *Service) ClassListUserWithDetail(c echo.Context) error {
 		return NoContent(errors.New("No tenant"))
 	}
 
-	//class id
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Class id is required"))
-	}
-	cid, err := strconv.ParseInt(sid, 10, 64)
+	//id
+	id, err := paramInt(c, "id", "Class id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
-	users, err := s.DB().GetClassUsersWithDetail(nil, logon, cid)
+	users, err := s.DB().GetClassUsersWithDetail(nil, logon, id)
 	if err != nil {
 		return InternalServerError(err)
 	}
@@ -188,17 +180,13 @@ func (s *Service) ClassListUser(c echo.Context) error {
 		return NoContent(errors.New("No tenant"))
 	}
 
-	//class id
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Class id is required"))
-	}
-	cid, err := strconv.ParseInt(sid, 10, 64)
+	//id
+	id, err := paramInt(c, "id", "Class id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
-	users, err := s.DB().GetClassUsers(nil, logon, cid)
+	users, err := s.DB().GetClassUsers(nil, logon, id)
 	if err != nil {
 		return InternalServerError(err)
 	}
@@ -232,14 +220,10 @@ func (s *Service) ClassCreateUser(c echo.Context) error {
 		return NoContent(errors.New("No tenant"))
 	}
 
-	//class id
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Class id is required"))
-	}
-	cid, err := strconv.ParseInt(sid, 10, 64)
+	//id
+	id, err := paramInt(c, "id", "Class id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	input := make(map[string]interface{})
@@ -262,7 +246,7 @@ func (s *Service) ClassCreateUser(c echo.Context) error {
 	password := input["password"].(string)
 
 	tx := s.DB().Begin()
-	account, err := s.DB().ClassCreateUser(tx, logon, cid, input)
+	account, err := s.DB().ClassCreateUser(tx, logon, id, input)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -290,7 +274,7 @@ func (s *Service) ClassCreateUser(c echo.Context) error {
 	}
 
 	//ge class
-	class, err := s.DB().GetClass(tx, logon, cid, "")
+	class, err := s.DB().GetClass(tx, logon, id, "")
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -356,14 +340,10 @@ func (s *Service) ClassDividedUser(c echo.Context) error {
 		return BadRequest(errors.New("Logon user hasn't a valid tenant"))
 	}
 
-	//class id
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Class id is required"))
-	}
-	cid, err := strconv.ParseInt(sid, 10, 64)
+	//id
+	id, err := paramInt(c, "id", "Class id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	data := DivideUsers{}
@@ -385,7 +365,7 @@ func (s *Service) ClassDividedUser(c echo.Context) error {
 	tx := s.DB().Begin()
 	//remove
 	if len(ru) > 0 {
-		err := s.DB().RemoveUserFromClass(tx, logon, cid, ru)
+		err := s.DB().RemoveUserFromClass(tx, logon, id, ru)
 		if err != nil {
 			tx.Rollback()
 			return InternalServerError(err)
@@ -393,7 +373,7 @@ func (s *Service) ClassDividedUser(c echo.Context) error {
 	}
 	//add
 	if len(au) > 0 {
-		err := s.DB().DivideUserToClass(tx, logon, cid, au)
+		err := s.DB().DivideUserToClass(tx, logon, id, au)
 		if err != nil {
 			tx.Rollback()
 			return InternalServerError(err)

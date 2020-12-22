@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -26,13 +25,10 @@ import (
 // @Security ApiKeyAuth
 // @Router /admin/user/{id} [get]
 func (s *Service) AdminGetUser(c echo.Context) error {
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	uid, err := strconv.ParseInt(sid, 10, 64)
+	//
+	uid, err := paramInt(c, "id", "User id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	user, err := s.DB().GetUser(nil, uid)
@@ -66,13 +62,9 @@ func (s *Service) AdminGetUser(c echo.Context) error {
 func (s *Service) AdminUpdateUser(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is requried"))
-	}
-	uid, err := strconv.ParseInt(sid, 10, 64)
+	uid, err := paramInt(c, "id", "User id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	input := make(map[string]interface{})
@@ -203,13 +195,9 @@ func (s *Service) AdminCreateAccount(c echo.Context) error {
 func (s *Service) AdminDeleteAcount(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	uid, err := strconv.ParseInt(sid, 10, 64)
+	uid, err := paramInt(c, "id", "User id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	tx := s.DB().Begin()
@@ -247,13 +235,9 @@ func (s *Service) AdminDeleteAcount(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /admin/user/{id}/account [get]
 func (s *Service) AdminGetAccount(c echo.Context) error {
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	uid, err := strconv.ParseInt(sid, 10, 64)
+	uid, err := paramInt(c, "id", "User id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	user, err := s.DB().GetAccountByID(nil, uid)
@@ -321,30 +305,22 @@ func (s *Service) AdminCreateTenant(c echo.Context) error {
 // @Tags Admin/tenant
 // @Accept json
 // @Produce json
-// @Param id query int true "tenant id"
-// @Param name query string false "名前"
+// @Param id path int true "tenant id"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /admin/tenant [get]
+// @Router /admin/tenant/{id} [get]
 func (s *Service) AdminGetTenant(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.QueryParam("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	name := c.QueryParam("name")
-	name, _ = url.QueryUnescape(name)
-
-	tid, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "Tenant id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	//update
-	tenant, err := s.DB().GetTenant(nil, logon, tid, name)
+	tenant, err := s.DB().GetTenant(nil, logon, id, "")
 	if err != nil {
 		return InternalServerError(err)
 	}
@@ -372,13 +348,9 @@ func (s *Service) AdminGetTenant(c echo.Context) error {
 func (s *Service) AdminUpdateTenant(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	tid, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "Tenant id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	input := make(map[string]interface{})
@@ -394,7 +366,7 @@ func (s *Service) AdminUpdateTenant(c echo.Context) error {
 
 	tx := s.DB().Begin()
 	//update
-	err = s.DB().UpdateTenant(tx, logon, tid, input)
+	err = s.DB().UpdateTenant(tx, logon, id, input)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -422,19 +394,15 @@ func (s *Service) AdminUpdateTenant(c echo.Context) error {
 func (s *Service) AdminDeleteTenant(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	tid, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "Tenant id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	tx := s.DB().Begin()
 
 	//1. tentans delete
-	err = s.DB().DeleteTenant(tx, logon, tid)
+	err = s.DB().DeleteTenant(tx, logon, id)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)

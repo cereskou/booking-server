@@ -8,35 +8,40 @@ import (
 	"gorm.io/gorm"
 )
 
-// CreateFacility - 施設を作成
-// @Summary 施設を作成します
-// @Tags Facility
+// CreateReservation - 予約を作成
+// @Summary 予約を作成します
+// @Tags Reservation
 // @Accept json
 // @Produce json
+// @Param schedid path int true "スケジュールID"
+// @Param userid path int true "ユーザーID"
 // @Param data body Empty true "data"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /facility [post]
-func (s *Service) CreateFacility(c echo.Context) error {
+// @Router /reserve/{schedid}/{userid} [post]
+func (s *Service) CreateReservation(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	input := make(map[string]interface{})
+	sid, err := paramInt(c, "schedid", "Schedule id is required")
+	if err != nil {
+		return err
+	}
+	uid, err := paramInt(c, "userid", "User id is required")
+	if err != nil {
+		return err
+	}
+	data := make(map[string]interface{})
 	//decode
-	if err := c.Bind(&input); err != nil {
+	if err := c.Bind(&data); err != nil {
 		return err
 	}
 
 	//input check
-	//name
-	if _, ok := input["name"]; !ok {
-		return BadRequest(errors.New("Facility name is required"))
-	}
-
 	tx := s.DB().Begin()
 	//create
-	facility, err := s.DB().CreateFacility(tx, logon, logon.Tenant, input)
+	result, err := s.DB().CreateReservation(tx, logon, sid, uid, data)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -45,26 +50,26 @@ func (s *Service) CreateFacility(c echo.Context) error {
 
 	resp := Response{
 		Code: http.StatusOK,
-		Data: facility,
+		Data: result,
 	}
 
 	return c.JSON(http.StatusOK, resp)
 }
 
-// GetFacilities - 施設情報を取得（複数）
-// @Summary 施設情報を取得（複数）を取得します
-// @Tags Tenant
+// GetUserReservations - 予約情報を取得（複数）
+// @Summary 予約情報（複数）を取得します
+// @Tags User
 // @Accept json
 // @Produce json
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /tenant/facilities [get]
-func (s *Service) GetFacilities(c echo.Context) error {
+// @Router /user/reserve [get]
+func (s *Service) GetUserReservations(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	result, err := s.DB().GetFacilities(nil, logon, logon.Tenant)
+	result, err := s.DB().GetReservations(nil, logon, 0, logon.ID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return NotFound(err)
@@ -83,31 +88,66 @@ func (s *Service) GetFacilities(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// GetFacility - 施設情報を取得
-// @Summary 施設情報を取得します
-// @Tags Tenant
+// GetScheduleReservations - 予約情報を取得（複数）
+// @Summary 予約情報（複数）を取得します
+// @Tags Schedule
 // @Accept json
 // @Produce json
-// @Param id path int true "施設ID"
+// @Param id path int true "スケジュールID"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /tenant/facility/{id} [get]
-func (s *Service) GetFacility(c echo.Context) error {
+// @Router /schedule/{id}/reserve [get]
+func (s *Service) GetScheduleReservations(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	if logon.Tenant == 0 {
-		return NoContent(errors.New("No tenant"))
-	}
-
-	//
-	id, err := paramInt(c, "id", "Facility id is required")
+	//id
+	schedid, err := paramInt(c, "id", "Reservation id is required")
 	if err != nil {
 		return err
 	}
 
-	result, err := s.DB().GetFacility(nil, logon, id)
+	result, err := s.DB().GetReservations(nil, logon, schedid, 0)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return NotFound(err)
+		}
+		return InternalServerError(err)
+	}
+	if len(result) == 0 {
+		return NotFound(errors.New("No content"))
+	}
+
+	resp := Response{
+		Code: http.StatusOK,
+		Data: result,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+// GetReservation - 予約情報を取得
+// @Summary 予約情報を取得します
+// @Tags Reservation
+// @Accept json
+// @Produce json
+// @Param id path int true "予約ID"
+// @Success 200 {object} Response
+// @Failure 404 {object} Response
+// @Failure 500 {object} HTTPError
+// @Security ApiKeyAuth
+// @Router /reserve/{id} [get]
+func (s *Service) GetReservation(c echo.Context) error {
+	logon := s.logonFromToken(c)
+
+	//id
+	id, err := paramInt(c, "id", "Reservation id is required")
+	if err != nil {
+		return err
+	}
+
+	result, err := s.DB().GetReservation(nil, logon, id)
 	if err != nil {
 		return InternalServerError(err)
 	}
@@ -120,70 +160,28 @@ func (s *Service) GetFacility(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// UpdateFacility - 施設情報を更新します
-// @Summary 施設情報を更新します
-// @Tags Facility
+// DeleteReservation - 予約を削除します
+// @Summary 予約を削除します
+// @Tags Reservation
 // @Accept json
 // @Produce json
-// @Param id path int true "施設ID"
-// @Param data body Empty true "data"
+// @Param id path int true "予約ID"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /facility/{id} [put]
-func (s *Service) UpdateFacility(c echo.Context) error {
+// @Router /reserve/{id} [delete]
+func (s *Service) DeleteReservation(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	id, err := paramInt(c, "id", "Facility id is required")
-	if err != nil {
-		return err
-	}
-
-	input := make(map[string]interface{})
-	//decode
-	if err := c.Bind(&input); err != nil {
-		return err
-	}
-
-	tx := s.DB().Begin()
-
-	err = s.DB().UpdateFacility(tx, logon, id, input)
-	if err != nil {
-		tx.Rollback()
-		return InternalServerError(err)
-	}
-	tx.Commit()
-
-	resp := Response{
-		Code: http.StatusOK,
-	}
-
-	return c.JSON(http.StatusOK, resp)
-}
-
-// DeleteFacility - 施設を削除します
-// @Summary 施設を削除します
-// @Tags Facility
-// @Accept json
-// @Produce json
-// @Param id path int true "施設ID"
-// @Success 200 {object} Response
-// @Failure 404 {object} Response
-// @Failure 500 {object} HTTPError
-// @Security ApiKeyAuth
-// @Router /facility/{id} [delete]
-func (s *Service) DeleteFacility(c echo.Context) error {
-	logon := s.logonFromToken(c)
-
-	id, err := paramInt(c, "id", "Facility id is required")
+	id, err := paramInt(c, "id", "Reservation id is required")
 	if err != nil {
 		return err
 	}
 
 	tx := s.DB().Begin()
 
-	err = s.DB().DeleteFacility(tx, logon, id)
+	err = s.DB().DeleteReservation(tx, logon, id)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -198,33 +196,33 @@ func (s *Service) DeleteFacility(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// EnabledFacility - 施設の利用可否（有効・無効）
-// @Summary 施設の利用可否（有効・無効）
-// @Tags Facility
+// EnabledReservation - 予約の利用可否（有効・無効）
+// @Summary 予約の利用可否（有効・無効）
+// @Tags Reservation
 // @Accept json
 // @Produce json
-// @Param id path int true "施設ID"
+// @Param id path int true "予約ID"
 // @Param status path int true "1:有効・0:無効"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /facility/{id}/{status} [put]
-func (s *Service) EnabledFacility(c echo.Context) error {
+// @Router /reserve/{id}/{status} [put]
+func (s *Service) EnabledReservation(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	id, err := paramInt(c, "id", "Facility id is required")
+	id, err := paramInt(c, "id", "Reservation id is required")
 	if err != nil {
 		return err
 	}
-	status, err := paramInt(c, "status", "Status id is required")
+	status, err := paramInt(c, "status", "Status is required")
 	if err != nil {
 		return err
 	}
 
 	tx := s.DB().Begin()
 
-	err = s.DB().EnabledFacility(tx, logon, id, int(status))
+	err = s.DB().EnabledReservation(tx, logon, id, int(status))
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)

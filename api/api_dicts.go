@@ -4,7 +4,6 @@ import (
 	"ditto/booking/models"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -15,29 +14,22 @@ import (
 // @Tags Dict
 // @Accept json
 // @Produce json
-// @Param dictid query int true "辞書ID"
-// @Param code query int false "コード"
+// @Param id path int true "辞書ID"
+// @Param code path int false "コード"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /dict [get]
+// @Router /dict/{id}/{code} [get]
 func (s *Service) GetDict(c echo.Context) error {
-	sdid := c.QueryParam("dictid")
-	if sdid == "" {
-		return BadRequest(errors.New("Dict id is required"))
-	}
-	dictid, err := strconv.ParseInt(sdid, 10, 64)
+	//id
+	dictid, err := paramInt(c, "id", "Dict id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
-	scode := c.QueryParam("code")
-	if scode == "" {
-		return BadRequest(errors.New("Code is required"))
-	}
-	code, err := strconv.ParseInt(scode, 10, 64)
+	code, err := paramInt(c, "code", "Code is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	resp := Response{
@@ -187,33 +179,21 @@ func (s *Service) AddDicts(c echo.Context) error {
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /dict/{dictid}/enabled [put]
+// @Router /dict/{id}/enabled [put]
 func (s *Service) EnableDict(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sdid := c.Param("dictid")
-	if sdid == "" {
-		return BadRequest(errors.New("Dict id is required"))
-	}
-	dictid, err := strconv.ParseInt(sdid, 10, 64)
+	dictid, err := paramInt(c, "id", "Dict id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
-	scode := c.QueryParam("code")
-	if scode == "" {
-		return BadRequest(errors.New("Code is required"))
-	}
-	code, err := strconv.ParseInt(scode, 10, 64)
+	code, err := queryParamInt(c, "code", "Code is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
-	sst := c.QueryParam("status")
-	if sst == "" {
-		return BadRequest(errors.New("Status is required"))
-	}
-	status, err := strconv.ParseInt(sst, 10, 64)
+	status, err := queryParamInt(c, "status", "Status is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	tx := s.DB().Begin()
@@ -246,20 +226,17 @@ func (s *Service) EnableDict(c echo.Context) error {
 // @Tags Dict
 // @Accept json
 // @Produce json
-// @Param data query Dict true "データ"
+// @Param id path int true "辞書ID"
+// @Param data body Dict true "データ"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /dict/{dictid} [put]
+// @Router /dict/{id} [put]
 func (s *Service) UpdateDict(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sdid := c.Param("dictid")
-	if sdid == "" {
-		return BadRequest(errors.New("Dict id is required"))
-	}
-	dictid, err := strconv.ParseInt(sdid, 10, 64)
+	dictid, err := paramInt(c, "id", "Dict id is required")
 	if err != nil {
 		return BadRequest(err)
 	}
@@ -305,7 +282,7 @@ func (s *Service) UpdateDict(c echo.Context) error {
 // @Tags Dict
 // @Accept json
 // @Produce json
-// @Param data query Dicts true "データ"
+// @Param data body Dicts true "データ"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
@@ -320,31 +297,24 @@ func (s *Service) UpdateDicts(c echo.Context) error {
 // @Tags Dict
 // @Accept json
 // @Produce json
-// @Param dictid query int true "辞書番号"
-// @Param code query int false "コード(0:全部)"
+// @Param id path int true "辞書番号"
+// @Param code path int false "コード(0:全部)"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
 // @Security ApiKeyAuth
-// @Router /dict [delete]
+// @Router /dict/{id}/{code} [delete]
 func (s *Service) DeleteDict(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sdid := c.QueryParam("dictid")
-	if sdid == "" {
-		return BadRequest(errors.New("Dict id is required"))
-	}
-	dictid, err := strconv.ParseInt(sdid, 10, 64)
+	//id
+	dictid, err := paramInt(c, "id", "Dict id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
-	scode := c.QueryParam("code")
-	if scode == "" {
-		return BadRequest(errors.New("Code is required"))
-	}
-	code, err := strconv.ParseInt(scode, 10, 64)
+	code, err := paramInt(c, "code", "Code is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	tx := s.DB().Begin()

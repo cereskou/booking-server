@@ -50,14 +50,14 @@ func (s *Service) Logout(c echo.Context) error {
 
 // Login - ログイン
 // @Summary ログイン
-// @Tags User
+// @Tags Login
 // @Accept json
 // @Produce json
 // @Param data body Login false "data"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
-// @Router /user/login [post]
+// @Router /login [post]
 func (s *Service) Login(c echo.Context) error {
 	login := Login{}
 	//decode
@@ -135,14 +135,15 @@ func (s *Service) Login(c echo.Context) error {
 
 // RefreshToken - api to refresh tokens
 // @Summary リフレッシュトークン
-// @Tags User
+// @Tags Login
 // @Accept json
 // @Produce json
 // @Param data body RefreshToken false "data"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
-// @Router /user/refresh [post]
+// @Security ApiKeyAuth
+// @Router /refresh [post]
 func (s *Service) RefreshToken(c echo.Context) error {
 	req := RefreshToken{}
 
@@ -192,27 +193,30 @@ func (s *Service) RefreshToken(c echo.Context) error {
 
 // ConfirmEmail - Email確認
 // @Summary Email確認
-// @Tags User
+// @Tags Login
 // @Accept json
 // @Produce json
-// @Param e query string true "Email"
 // @Param code query string true "are確認コード"
 // @Success 200 {object} Response
 // @Failure 404 {object} Response
 // @Failure 500 {object} HTTPError
-// @Router /user/confirm [get]
+// @Router /confirm [get]
 func (s *Service) ConfirmEmail(c echo.Context) error {
-	email := c.QueryParam("e")
-	code := c.QueryParam("code")
+	code, err := queryParam(c, "code", "Code is required")
+	if err != nil {
+		return err
+	}
 
 	conf := config.Load()
 
 	//有効期間
 	expires := utils.HourToSecond(conf.Confirm.Expires)
+
+	//begin transaction
 	tx := s.DB().Begin()
 
 	//get confirm record
-	err := s.DB().ConfirmAccountWithCode(tx, email, code, expires)
+	err = s.DB().ConfirmAccountWithCode(tx, code, expires)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)

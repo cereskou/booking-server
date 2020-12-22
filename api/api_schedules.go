@@ -4,7 +4,6 @@ import (
 	"ditto/booking/models"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -63,13 +62,9 @@ func (s *Service) CreateSchedule(c echo.Context) error {
 func (s *Service) GetSchedules(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Menu id is required"))
-	}
-	id, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "Menu id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	result, err := s.DB().GetSchedules(nil, logon, id)
@@ -105,14 +100,10 @@ func (s *Service) GetSchedules(c echo.Context) error {
 func (s *Service) GetSchedule(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	//class id
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Schedule id is required"))
-	}
-	schedid, err := strconv.ParseInt(sid, 10, 64)
+	//
+	schedid, err := paramInt(c, "id", "Schedule id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	result, err := s.DB().GetSchedule(nil, logon, schedid)
@@ -142,13 +133,9 @@ func (s *Service) GetSchedule(c echo.Context) error {
 func (s *Service) DeleteSchedule(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sdid := c.Param("id")
-	if sdid == "" {
-		return BadRequest(errors.New("Schedule id is required"))
-	}
-	id, err := strconv.ParseInt(sdid, 10, 64)
+	id, err := paramInt(c, "id", "Schedule id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	tx := s.DB().Begin()
@@ -183,21 +170,13 @@ func (s *Service) DeleteSchedule(c echo.Context) error {
 func (s *Service) EnabledSchedule(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Schedule id is required"))
-	}
-	id, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "Schedule id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
-	ssta := c.Param("status")
-	if ssta == "" {
-		return BadRequest(errors.New("Status is required"))
-	}
-	status, err := strconv.ParseInt(ssta, 10, 64)
+	status, err := paramInt(c, "status", "Status is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	tx := s.DB().Begin()

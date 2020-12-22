@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -104,17 +103,14 @@ func (s *Service) CreateTenant(c echo.Context) error {
 func (s *Service) ChangeUserTenant(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("Id is required"))
-	}
-	tid, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "Tenant id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
+
 	tx := s.DB().Begin()
 
-	err = s.DB().ChangeUserTenant(tx, logon, tid)
+	err = s.DB().ChangeUserTenant(tx, logon, id)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -123,7 +119,7 @@ func (s *Service) ChangeUserTenant(c echo.Context) error {
 
 	//clear
 	key := "ACCN_TENANT_" + logon.Email
-	err = s.CacheSet(key, tid)
+	err = s.CacheSet(key, id)
 	if err != nil {
 	}
 
@@ -356,40 +352,36 @@ func (s *Service) TenantDeleteUser(c echo.Context) error {
 	logon := s.logonFromToken(c)
 
 	//user id
-	sid := c.Param("id")
-	if sid == "" {
-		return BadRequest(errors.New("User id is required"))
-	}
-	uid, err := strconv.ParseInt(sid, 10, 64)
+	id, err := paramInt(c, "id", "User id is required")
 	if err != nil {
-		return BadRequest(err)
+		return err
 	}
 
 	tx := s.DB().Begin()
 
 	//1. role
-	err = s.DB().DeleteUserRole(tx, logon, logon.Tenant, []int64{uid})
+	err = s.DB().DeleteUserRole(tx, logon, logon.Tenant, []int64{id})
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
 	}
 
 	//2. tenant_users
-	err = s.DB().RemoveUserFromTenant(tx, logon, logon.Tenant, []int64{uid})
+	err = s.DB().RemoveUserFromTenant(tx, logon, logon.Tenant, []int64{id})
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
 	}
 
 	//3. user delete
-	err = s.DB().DeleteUser(tx, uid)
+	err = s.DB().DeleteUser(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
 	}
 
 	//4. delete account
-	err = s.DB().DeleteAccount(tx, logon, uid)
+	err = s.DB().DeleteAccount(tx, logon, id)
 	if err != nil {
 		tx.Rollback()
 		return InternalServerError(err)
@@ -397,7 +389,7 @@ func (s *Service) TenantDeleteUser(c echo.Context) error {
 	tx.Commit()
 
 	//自分を削除すること
-	if uid == logon.ID {
+	if id == logon.ID {
 		key := "ACCN_TENANT_" + logon.Email
 		err = s.CacheDel(key)
 		if err != nil {

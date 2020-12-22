@@ -142,12 +142,15 @@ func (s *Service) UpdateHolidays(c echo.Context) error {
 // @Failure 500 {object} HTTPError
 // @Router /holidays/{year} [get]
 func (s *Service) ListHolidays(c echo.Context) error {
-	year := c.Param("year")
+	year, err := paramInt(c, "year", "Year is required")
+	if err != nil {
+		return err
+	}
 
 	key := fmt.Sprintf("HOLI_%v", year)
 	var holidays []*models.Holiday
 	//use redis cache
-	err := s.CacheGet(key, &holidays)
+	err = s.CacheGet(key, &holidays)
 	if err != nil {
 		holidays, err = s.DB().HolidaysSelect(nil, year)
 		if err != nil {
