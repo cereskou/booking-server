@@ -30,7 +30,7 @@ func (d *Database) HolidaysInsert(db *gorm.DB, recs []*models.Holiday) error {
 }
 
 // HolidaysSelect -
-func (d *Database) HolidaysSelect(db *gorm.DB, year string) ([]*models.Holiday, error) {
+func (d *Database) HolidaysSelect(db *gorm.DB, year int64) ([]*models.Holiday, error) {
 	db = d.ValidDB(db)
 
 	result := make([]*models.Holiday, 0)

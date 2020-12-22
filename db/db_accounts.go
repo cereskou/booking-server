@@ -142,16 +142,16 @@ func (d *Database) ConfirmAccount(db *gorm.DB, logon *cx.Payload, uid int64) err
 }
 
 //ConfirmAccountWithCode -
-func (d *Database) ConfirmAccountWithCode(db *gorm.DB, email string, code string, expires int64) error {
+func (d *Database) ConfirmAccountWithCode(db *gorm.DB, code string, expires int64) error {
 	db = d.ValidDB(db)
 
-	sql := "update accounts a,accounts_confirm ac set a.email_confirmed=1,ac.used = 1 where a.id=ac.account_id and ac.used=0 and ac.confirm_code=? and ac.email=?"
+	sql := "update accounts a,accounts_confirm ac set a.email_confirmed=1,ac.used = 1 where a.id=ac.account_id and ac.used=0 and ac.confirm_code=?"
 	//有効期限
 	if expires > 0 {
 		sql += " and TIME_TO_SEC(timediff(now(),ac.update_date))<=?"
 	}
 
-	result := db.Exec(sql, code, email, expires)
+	result := db.Exec(sql, code, expires)
 	if result.Error != nil {
 		return result.Error
 	}
