@@ -17,12 +17,14 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	g := e.Group(prefix)
 
 	//anonymous
+	//signup
+	g.POST("/signup", s.Signup)
 	//load
-	g.POST("/user/login", s.Login)
+	g.POST("/login", s.Login)
 	//refresh token
-	g.POST("/user/refresh", s.RefreshToken)
+	g.POST("/refresh", s.RefreshToken)
 	//user confirm
-	g.GET("/user/confirm", s.ConfirmEmail)
+	g.GET("/confirm", s.ConfirmEmail)
 
 	//User
 	u := g.Group("/user")
@@ -43,6 +45,8 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	u.PUT("/tenants/:id", s.ChangeUserTenant)
 	//get classes
 	u.GET("/classes", s.GetClasses)
+	//get reservations
+	u.GET("/reserve", s.GetUserReservations)
 
 	//Holiday
 	g.GET("/holidays/:year", s.ListHolidays)
@@ -70,11 +74,12 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	d := g.Group("/dict")
 	d.Use(middleware.JWTWithConfig(config))
 	d.Use(casbinmw.Middleware(s._enforcer))
-	d.GET("", s.GetDict)
+	d.GET("/:id/:code", s.GetDict)
 	d.POST("", s.AddDict)
 	d.POST("/array", s.AddDicts)
-	d.PUT("/:dictid/enabled", s.EnableDict)
-	d.DELETE("", s.DeleteDict)
+	d.PUT("/:id/enabled", s.EnableDict)
+	d.DELETE("/:id/:code", s.DeleteDict)
+	d.PUT("/:id", s.UpdateDict)
 
 	//Tenant -
 	t := g.Group("/tenant")
@@ -133,7 +138,16 @@ func (s *Service) RegisterRoutes(e *echo.Echo, prefix string) {
 	l.POST("", s.CreateSchedule)
 	l.DELETE("/:id", s.DeleteSchedule)
 	l.PUT("/:id/:status", s.EnabledSchedule)
+	l.GET("/:id/reserve", s.GetScheduleReservations)
 
+	//reserve -
+	r := g.Group("/reserve")
+	r.Use(middleware.JWTWithConfig(config))
+	r.Use(casbinmw.Middleware(s._enforcer))
+	r.POST("/:schedid/:userid", s.CreateReservation)
+	r.GET("/:id", s.GetReservation)
+	r.DELETE("/:id", s.DeleteReservation)
+	r.PUT("/:id/:status", s.EnabledReservation)
 }
 
 //traceID -
