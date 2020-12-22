@@ -34,6 +34,13 @@ type Login struct {
 	Password string `json:"password"`
 }
 
+//Signup -
+type Signup struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 //RefreshToken -
 type RefreshToken struct {
 	GrantType string `json:"grant_type"`
