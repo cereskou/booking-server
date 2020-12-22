@@ -2,7 +2,7 @@
 
 ## 開発日記
 
-[実装済みAPI](api.md)
+[実装済みAPI](api.md) 詳細については、localhost:4000/swagger/index.htmlより確認できます。  
   
 ### 2020/12/21
   
