@@ -108,6 +108,7 @@ type Config struct {
 	FileName string           `json:"-"`        //s3service.jsonパス
 	Dir      string           `json:"-"`        //work directory
 	LogFile  string           `json:"-"`        //logfile fullpath
+	Service  string           `json:"service"`  //サービス名
 	Host     string           `json:"host"`     //サーバーIP
 	Port     int              `json:"port"`     //ポート
 	BaseURL  string           `json:"baseurl"`  //BaseURL
