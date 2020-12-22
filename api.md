@@ -1,3 +1,17 @@
+## API説明
+
+1. /admin 管理者（システム）
+1. /tenant 組織（管理者）
+1. /user 個人・管理者
+1. /dict 辞書類
+1. /facility 施設（管理者）
+1. /holidays 休日
+1. /menu メニュー（管理者）
+1. /schedule スケジュール（管理者）
+1. /reserve 予約（個人・管理者）
+
+<br>
+
 ## 実装済みAPI
 
 | class | api path | method | memo |
