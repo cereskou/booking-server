@@ -38,17 +38,36 @@
 
 
 ---
-- User  
-![User](images/api_user.png)
+- Admin
+![Admin](images/api_admin.png)  
 
-- Tenant 
-![Tenant](images/api_tenant.png)
-
-- Holidays
-![Holiday](images/api_holidays.png)
+- Class
+![Class](images/api_class.png)  
 
 - Dict
-![Dict](images/api_dict.png)
+![Dict](images/api_dict.png)  
 
-- Admin
-![Admin](images/api_admin.png)
+- Facility
+![Facility](images/api_facility.png)  
+
+- Holidays
+![holidays](images/api_holidays.png)  
+
+- Login
+![Login](images/api_login.png)  
+
+- Menu
+![Menu](images/api_menu.png)  
+
+- Reserve
+![Reserve](images/api_reserve.png)  
+
+- Schedule
+![schedule](images/api_schedule.png)  
+
+- Tenant
+![tenant](images/api_tenant.png)  
+
+- User
+![User](images/api_user.png)  
+
